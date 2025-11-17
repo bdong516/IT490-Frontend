@@ -1,0 +1,28 @@
+# Ignore system / Apache files
+*.log
+*.pid
+*.cache
+*.swp
+*.tmp
+.DS_Store
+
+# Ignore Python cache & listener logs
+__pycache__/
+rabbitmq/*.log
+
+# Ignore environment / config files
+config.ini
+.env
+
+# Ignore OS junk
+Thumbs.db
+
+# Don’t include vendor or node_modules if present
+vendor/
+node_modules/
+
+# Ignore apache’s default index
+html/
+
+# Ignore any backup files
+*~
