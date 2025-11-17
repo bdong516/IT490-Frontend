@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Test Autocomplete</title>
+  <style>
+    .guess-wrapper { position: relative; width: 300px; }
+    #suggestions {
+      list-style: none; padding: 0; margin-top: 0;
+      border: 1px solid #ccc; border-top: none;
+      max-height: 150px; overflow-y: auto;
+      width: 100%; background: white; position: absolute; z-index: 1000;
+    }
+    #suggestions li { padding: 8px; cursor: pointer; }
+    #suggestions li:hover { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <div class="guess-wrapper">
+    <input type="text" id="guessInput" placeholder="Enter movie..." autocomplete="off">
+    <ul id="suggestions"></ul>
+  </div>
+
+  <script>
+  let movieList = [];
+  async function loadMovies() {
+    const r = await fetch('movies.json');
+    const d = await r.json();
+    movieList = d.movies || [];
+    console.log("Loaded", movieList.length, "movies");
+  }
+  loadMovies();
+
+  const input = document.getElementById('guessInput');
+  const suggestions = document.getElementById('suggestions');
+
+  input.addEventListener('input', (e) => {
+    const val = e.target.value.toLowerCase();
+    suggestions.innerHTML = '';
+    if (!val) return;
+    movieList.filter(t => t.toLowerCase().includes(val)).slice(0, 5).forEach(m => {
+      const li = document.createElement('li');
+      li.textContent = m;
+      li.onclick = () => { input.value = m; suggestions.innerHTML = ''; };
+      suggestions.appendChild(li);
+    });
+  });
+  </script>
+</body>
+</html>
