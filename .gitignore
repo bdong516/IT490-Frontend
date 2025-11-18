@@ -1,28 +1,34 @@
-# Ignore system / Apache files
-*.log
-*.pid
-*.cache
-*.swp
-*.tmp
+# System files
 .DS_Store
-
-# Ignore Python cache & listener logs
-__pycache__/
-rabbitmq/*.log
-
-# Ignore environment / config files
-config.ini
-.env
-
-# Ignore OS junk
 Thumbs.db
 
-# Don’t include vendor or node_modules if present
-vendor/
+# Logs
+*.log
+rabbitmq/receive.log
+
+# Python env
+venv/
+__pycache__/
+*.pyc
+
+# Node
 node_modules/
 
-# Ignore apache’s default index
-html/
+# Composer / PHP
+vendor/
 
-# Ignore any backup files
-*~
+# OS junk
+*.swp
+*.swo
+
+# Apache
+*.pid
+
+# Do NOT commit your response_status file
+response_status.json
+
+# Do NOT commit session data
+*.sess
+
+# Ignore backup/passive flag
+.passive
