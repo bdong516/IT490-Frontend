@@ -1,5 +1,11 @@
 <?php
 session_start();
+
+// If this file exists, frontend1 should be passive, redirect to frontend2
+if (file_exists(__DIR__ . '/.passive')) {
+    header("Location: http://34.31.203.117" . $_SERVER['REQUEST_URI']);
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -10,7 +16,22 @@ session_start();
 
   <script>
   document.addEventListener("DOMContentLoaded", () => {
-    // Greeting logic
+
+    //
+    // ----- FIXED: Secure UUID generator that works on HTTP -----
+    //
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+
+    //
+    // ----- GREETING LOGIC -----
+    //
     const greeting = document.getElementById("greeting");
     const userEmail = localStorage.getItem("userEmail");
 
@@ -20,14 +41,20 @@ session_start();
       greeting.textContent = "Hello, Guest!";
     }
 
-    // Assign or get sessionID for the game
+
+    //
+    // ----- SESSION ID HANDLING -----
+    //
     let sessionID = localStorage.getItem("cinemadleSessionID");
     if (!sessionID) {
-      sessionID = crypto.randomUUID();
+      sessionID = generateUUID();
       localStorage.setItem("cinemadleSessionID", sessionID);
     }
 
-    // Handle Start Game click
+
+    //
+    // ----- START GAME BUTTON CLICK HANDLER -----
+    //
     document.getElementById("startGameBtn").addEventListener("click", async (e) => {
       e.preventDefault();
 
@@ -58,6 +85,7 @@ session_start();
       // Redirect after sending the start flag
       window.location.href = "game.php";
     });
+
   });
   </script>
 </head>
@@ -78,7 +106,7 @@ session_start();
   <main>
     <h1 id="greeting">Hello, Guest!</h1>
 
-    <!-- The link is now a clickable JS start button -->
+    <!-- The Start Game button -->
     <a href="#" id="startGameBtn" style="font-size:20px; text-decoration:none;">
       🎬 Start Cinemadle — Guess the Movie!
     </a>

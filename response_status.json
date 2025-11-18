@@ -1,7 +1,8 @@
 {
-    "Flag": "game_lost",
-    "SessionID": "70e3a5ca-bc0e-4c9e-a4d7-f203b077f2e9",
+    "Flag": "game_over",
+    "SessionID": "f596a328-f20f-448a-a7ee-36e796e7db12",
     "Username": "guest",
-    "Attempts": 5,
-    "Message": "\u274c You lost! The movie was 'Internal Affairs'."
+    "Attempts": 4,
+    "Message": "Correct! The movie was Clueless",
+    "Timestamp": 1763439615.0956044
 }

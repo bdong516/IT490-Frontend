@@ -1,4 +1,12 @@
-<?php ?>
+<?php
+session_start();
+
+// If this file exists, frontend1 should be passive, redirect to frontend2
+if (file_exists(__DIR__ . '/.passive')) {
+    header("Location: http://34.31.203.117" . $_SERVER['REQUEST_URI']);
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

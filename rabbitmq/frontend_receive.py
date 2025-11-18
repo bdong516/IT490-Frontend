@@ -22,19 +22,25 @@ def callback(ch, method, properties, body):
     try:
         message = json.loads(body.decode())
 
-        # ADD TIMESTAMP HERE — BACKEND DOES NOT NEED TO PROVIDE IT
+        # Add a timestamp so frontend knows it's fresh
         message["Timestamp"] = time.time()
 
         print("\nReceived Backend2 message:")
         print(json.dumps(message, indent=4))
 
-        # Atomic write + flush + fsync ensures PHP reads latest data
-        with open(OUTPUT_FILE, "w") as f:
+        # --- ATOMIC WRITE FIX ---
+        temp_path = OUTPUT_FILE + ".tmp"
+
+        # Write to a temporary file first
+        with open(temp_path, "w") as f:
             json.dump(message, f, indent=4)
             f.flush()
-            os.fsync(f.fileno())
+            os.fsync(f.fileno())  # ensure data fully written
 
-        print("response_status.json updated.\n")
+        # Atomic replace — instant swap (no partial writes)
+        os.replace(temp_path, OUTPUT_FILE)
+
+        print("response_status.json updated atomically.\n")
         sys.stdout.flush()
 
     except Exception as e:
