@@ -72,8 +72,11 @@ try {
     $channel->close();
     $connection->close();
 } catch (Exception $e) {
-    error_log('RabbitMQ TLS/AMQP connection error (send_user_data.php): ' . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => 'RabbitMQ TLS connection failed']);
+    $errorMsg = $e->getMessage();
+    error_log('RabbitMQ TLS/AMQP connection error (send_user_data.php): ' . $errorMsg);
+    error_log('Connection attempted to: ' . $HAPROXY_HOST . ':' . ($USE_TLS ? $PORT_TLS : $PORT_PLAIN));
+    error_log('TLS enabled: ' . ($USE_TLS ? 'yes' : 'no'));
+    echo json_encode(['success' => false, 'message' => 'RabbitMQ connection failed: ' . $errorMsg]);
     exit;
 }
 
