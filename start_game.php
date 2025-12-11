@@ -18,7 +18,7 @@ $dotenv->load();
 $HAPROXY_HOST = $_ENV['RABBIT_HOST'] ?? '100.86.66.48';
 $PORT_PLAIN   = isset($_ENV['RABBIT_PORT']) ? (int)$_ENV['RABBIT_PORT'] : 5672;
 $PORT_TLS     = isset($_ENV['RABBIT_TLS_PORT']) ? (int)$_ENV['RABBIT_TLS_PORT'] : 5671;
-$USE_TLS      = strtolower($_ENV['USE_TLS'] ?? 'false') === 'true';
+$USE_TLS      = false;  // PHP uses non-TLS, Python uses TLS
 
 $USERNAME = $_ENV['RABBIT_USERNAME'] ?? 'jol';
 $PASSWORD = $_ENV['RABBIT_PASSWORD'] ?? 'sysadmin';
