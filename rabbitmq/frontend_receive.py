@@ -7,29 +7,26 @@ import os
 import ssl
 from dotenv import load_dotenv
 
-# -----------------------------------
-# Load environment variables
-# -----------------------------------
+# Load environment
 load_dotenv("/home/bd293/cinemadle_env/.env")
 
 HAPROXY_HOST = os.getenv("HAPROXY_HOST")
 PORT_TLS     = int(os.getenv("RABBITMQ_PORT_TLS", "5671"))
 USERNAME     = os.getenv("RABBITMQ_USERNAME")
 PASSWORD     = os.getenv("RABBITMQ_PASSWORD")
-QUEUE_NAME   = os.getenv("QUEUE_BACKEND2_TO_FRONT")
+
+QUEUE_NAME   = os.getenv("QUEUE_BACKEND2_TO_FRONT")  # should be BACKEND2_TO_FRONT
+
 OUTPUT_FILE  = os.getenv("RESPONSE_FILE", "/var/www/html/response_status.json")
 
 sys.stdout.reconfigure(line_buffering=True)
 
-# -----------------------------------
-# TLS Connection Factory
-# -----------------------------------
 def get_rabbitmq_connection():
-    print(f"[TLS] Connecting to {HAPROXY_HOST}:{PORT_TLS}")
+    print(f"\n[TLS] Connecting to {HAPROXY_HOST}:{PORT_TLS} ...")
 
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE  # Allow self-signed certs
+    ssl_context.verify_mode = ssl.CERT_NONE
 
     credentials = pika.PlainCredentials(USERNAME, PASSWORD)
 
@@ -37,21 +34,21 @@ def get_rabbitmq_connection():
         host=HAPROXY_HOST,
         port=PORT_TLS,
         credentials=credentials,
-        ssl_options=pika.SSLOptions(ssl_context),
         heartbeat=600,
-        blocked_connection_timeout=300
+        blocked_connection_timeout=300,
+        ssl_options=pika.SSLOptions(ssl_context)
     )
 
     connection = pika.BlockingConnection(params)
     channel = connection.channel()
+
+    # MUST MATCH EXACTLY OR IT WON'T RECEIVE ANYTHING
     channel.queue_declare(queue=QUEUE_NAME, durable=True)
 
-    print("[TLS] Connected successfully.")
+    print(f"[TLS] Connected. Listening to queue: {QUEUE_NAME}")
     return connection, channel
 
-# -----------------------------------
-# Handle incoming backend2 messages
-# -----------------------------------
+
 def callback(ch, method, properties, body):
     try:
         message = json.loads(body.decode())
@@ -64,7 +61,7 @@ def callback(ch, method, properties, body):
             os.fsync(f.fileno())
 
         os.replace(tmp, OUTPUT_FILE)
-        print(f"[OK] Wrote response for SessionID={message.get('SessionID')}")
+        print(f"[OK] Wrote response for Flag={message.get('Flag')} SessionID={message.get('SessionID')}")
 
     except Exception as e:
         print("[ERROR] Failed to process message:", e)
@@ -72,9 +69,6 @@ def callback(ch, method, properties, body):
         traceback.print_exc()
 
 
-# -----------------------------------
-# Main listener loop with auto-reconnect
-# -----------------------------------
 if __name__ == "__main__":
     while True:
         try:
@@ -86,15 +80,11 @@ if __name__ == "__main__":
                 auto_ack=True
             )
 
-            print(f"[WAITING] Listening on queue: {QUEUE_NAME}")
+            print("[WAITING] Awaiting messages...")
             channel.start_consuming()
 
-        except pika.exceptions.AMQPConnectionError:
-            print("[WARN] Lost connection. Reconnecting in 5 seconds...")
-            time.sleep(5)
-
         except KeyboardInterrupt:
-            print("\n[EXIT] Shutting down listener.")
+            print("Shutting down listener...")
             try:
                 connection.close()
             except:
@@ -102,7 +92,6 @@ if __name__ == "__main__":
             break
 
         except Exception as e:
-            print("[ERROR] Unexpected exception:", e)
-            import traceback
-            traceback.print_exc()
+            print("\n[ERROR] Lost connection:", e)
+            print("[RETRY] Reconnecting in 5 seconds...\n")
             time.sleep(5)
