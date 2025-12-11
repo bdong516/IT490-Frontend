@@ -1,6 +1,7 @@
 <?php
 session_start();
-$username = $_SESSION['username'] ?? "Guest";
+$username = $_SESSION['email'] ?? "guest";
+$mode = $_GET['mode'] ?? "random";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -8,16 +9,30 @@ $username = $_SESSION['username'] ?? "Guest";
 <meta charset="UTF-8">
 <title>Cinemadle | Game</title>
 <link rel="stylesheet" href="css/styles.css">
-<link rel="stylesheet" href="css/game.css">
+
+<style>
+.game-container { max-width: 750px; margin: 2rem auto; text-align: center; }
+.guess-wrapper { position: relative; width: 100%; max-width: 420px; margin: 0 auto; }
+#guessInput { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
+#suggestions { list-style: none; padding: 0; margin: 0; border: 1px solid #ccc; border-top: none; background: #ffffff; width: 100%; position: absolute; z-index: 8000; max-height: 200px; overflow-y: auto; }
+#suggestions li { padding: 10px; cursor: pointer; }
+#suggestions li:hover { background: #148B18; color: white; }
+#historyBox { margin-top: 25px; padding: 15px; background: #f1f1f1; border: 1px solid #ccc; border-radius: 8px; max-height: 260px; overflow-y: auto; text-align: left; }
+.history-item { padding: 10px; margin-bottom: 8px; background: #ffffff; border-left: 5px solid #148B18; border-radius: 6px; }
+#hintBox { margin-top: 25px; padding: 15px; background: #e7f5e9; border: 1px solid #148B18; border-radius: 8px; text-align: left; }
+button { margin-top: 15px; padding: 10px 18px; background: #148B18; border: none; border-radius: 6px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
+button:hover { background: #0f6611; }
+#responseArea { margin-top: 18px; font-size: 18px; font-weight: bold; min-height: 32px; }
+</style>
 </head>
 
 <body>
 
 <header>
-    <a class="logo" href="index.php">CINEMADLE</a>
+    <a href="index.php" class="logo">CINEMADLE</a>
     <nav>
         <?php if (!empty($_SESSION["logged_in"])): ?>
-            <span class="welcome-user">Hello, <?php echo htmlspecialchars($username); ?>!</span>
+            <span><?php echo htmlspecialchars($username); ?></span>
             <a href="logout.php">Logout</a>
         <?php else: ?>
             <a href="login.php">Login</a>
@@ -26,125 +41,170 @@ $username = $_SESSION['username'] ?? "Guest";
     </nav>
 </header>
 
-<div class="game-container">
+<main class="game-container">
 
-    <h1 class="page-title">Random Game</h1>
-    <p class="subtitle">Unlimited guesses</p>
+    <?php if ($mode === "daily"): ?>
+        <h1>Daily Game</h1>
+    <?php elseif ($mode === "daily_summary"): ?>
+        <h1>Daily Summary</h1>
+    <?php else: ?>
+        <h1>Guess the Movie!</h1>
+    <?php endif; ?>
 
-    <img id="posterImage" class="poster" src="" alt="Movie Poster" style="display:none;">
-
-    <div class="guess-form">
+    <form id="guessForm" autocomplete="off">
         <div class="guess-wrapper">
-            <input id="guessInput" type="text" placeholder="Enter your guess..." autocomplete="off">
+            <input type="text" id="guessInput" placeholder="Enter your guess..." required>
             <ul id="suggestions"></ul>
         </div>
+        <button type="submit">Submit Guess</button>
+    </form>
 
-        <button id="submitGuessBtn" class="primary-btn">Submit Guess</button>
-    </div>
+    <div id="responseArea"></div>
 
-    <div id="responseBox" class="response-box"></div>
-
-    <div class="panel" id="historyPanel" style="display:none;">
+    <div id="historyBox">
         <h3>Your Guess History</h3>
         <div id="historyList"></div>
     </div>
 
-    <div class="panel" id="hintPanel" style="display:none;">
+    <div id="hintBox">
         <h3>Hints</h3>
-        <div id="hintContent"></div>
+        <div id="hintContent">Make a guess to see hints!</div>
     </div>
-
-    <div id="playAgainBox" style="display:none;">
-        <button class="primary-btn" onclick="window.location.reload()">Play Again</button>
-    </div>
-
-</div>
-
-<footer>
-    © 2025 Cinemadle. All Rights Reserved.
-</footer>
+</main>
 
 <script>
-// Autocomplete state
-let movieList = [];
-let guessedTitles = [];
+let sessionID = localStorage.getItem("cinemadleSessionID");
+if (!sessionID) {
+    sessionID = crypto.randomUUID();
+    localStorage.setItem("cinemadleSessionID", sessionID);
+}
 
-// Fetch list of movies (used for autocomplete)
-fetch("movies.json")
-    .then(res => res.json())
-    .then(data => movieList = data)
-    .catch(() => movieList = []);
+const username = "<?php echo $username; ?>";
 
-// Autocomplete logic
+let movies = [];
+async function loadMovies() {
+    const r = await fetch("movies.json");
+    movies = await r.json();
+}
+loadMovies();
+
+
 const input = document.getElementById("guessInput");
 const suggestions = document.getElementById("suggestions");
+let selectedMovieId = null;
 
 input.addEventListener("input", () => {
-    const query = input.value.toLowerCase();
+    const txt = input.value.toLowerCase();
     suggestions.innerHTML = "";
+    selectedMovieId = null;
+    if (!txt) return;
 
-    if (!query) return;
+    const results = movies.filter(m => m.title.toLowerCase().includes(txt)).slice(0, 10);
 
-    const matches = movieList.filter(
-        title => title.toLowerCase().startsWith(query)
-    ).slice(0, 6);
-
-    matches.forEach(match => {
+    for (const m of results) {
         const li = document.createElement("li");
-        li.textContent = match;
+        li.textContent = m.title;
         li.onclick = () => {
-            input.value = match;
+            input.value = m.title;
+            selectedMovieId = m.id;
             suggestions.innerHTML = "";
         };
         suggestions.appendChild(li);
-    });
-});
-
-// Submit Guess
-document.getElementById("submitGuessBtn").addEventListener("click", () => {
-    const guess = input.value.trim();
-    if (!guess) return;
-
-    suggestions.innerHTML = "";
-
-    fetch("send_guess.php", {
-        method: "POST",
-        body: JSON.stringify({
-            Flag: "guess",
-            Payload: {
-                Guess: guess,
-                SessionID: "<?php echo $_SESSION['session_id'] ?? ''; ?>"
-            }
-        })
-    })
-    .then(res => res.json())
-    .then(result => handleResponse(result))
-    .catch(err => console.error(err));
-});
-
-function handleResponse(res) {
-    if (!res.success) return;
-
-    const data = res.data;
-    const flag = data.Flag;
-
-    document.getElementById("responseBox").textContent = data.Message || "";
-
-    document.getElementById("posterImage").style.display = "block";
-    document.getElementById("posterImage").src = data.PosterURL || "";
-
-    document.getElementById("historyPanel").style.display = "block";
-    document.getElementById("historyList").innerHTML =
-        data.History?.map(h => `<div class='history-item'>${h}</div>`).join("") || "";
-
-    document.getElementById("hintPanel").style.display = "block";
-    document.getElementById("hintContent").innerHTML = data.Hints || "";
-
-    // End of game
-    if (flag === "game_win" || flag === "game_over") {
-        document.getElementById("playAgainBox").style.display = "block";
     }
-}
+});
+
+document.addEventListener("click", e => {
+    if (!document.querySelector(".guess-wrapper").contains(e.target)) {
+        suggestions.innerHTML = "";
+    }
+});
+
+const responseDiv = document.getElementById("responseArea");
+const historyList = document.getElementById("historyList");
+const hintContent = document.getElementById("hintContent");
+
+document.getElementById("guessForm").addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const guessText = input.value.trim();
+    if (!guessText) return;
+
+    if (!selectedMovieId) {
+        const found = movies.find(m => m.title.toLowerCase() === guessText.toLowerCase());
+        if (found) selectedMovieId = found.id;
+    }
+
+    if (!selectedMovieId) {
+        responseDiv.textContent = "Please choose a valid movie.";
+        return;
+    }
+
+    const body = {
+        Flag: "guess",
+        Payload: {
+            SessionID: sessionID,
+            Username: username,
+            GuessIndex: selectedMovieId
+        }
+    };
+
+    const r = await fetch("send_guess.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    });
+
+    const out = await r.json();
+    const g = out.data;
+
+    if (g.Flag === "guess_feedback") {
+        responseDiv.textContent = "❌ Incorrect Guess";
+
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.textContent = guessText + " — Incorrect";
+        historyList.appendChild(item);
+
+        let hintHTML = "";
+        if (g.Hint) hintHTML += "<p>" + g.Hint + "</p>";
+
+        if (g.Overlaps) {
+            hintHTML += "<ul>";
+            hintHTML += "<li>Director Match: " + g.Overlaps.DirectorMatch + "</li>";
+            hintHTML += "<li>Shared Actors: " + (g.Overlaps.SharedActors.join(', ') || "None") + "</li>";
+            hintHTML += "<li>Shared Genres: " + (g.Overlaps.SharedGenres.join(', ') || "None") + "</li>";
+            hintHTML += "</ul>";
+        }
+
+        hintContent.innerHTML = hintHTML;
+    }
+
+    if (g.Flag === "game_win") {
+        responseDiv.textContent = "🎉 Correct! The movie was: " + g.Answer;
+
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.textContent = guessText + " — Correct!";
+        historyList.appendChild(item);
+
+        hintContent.innerHTML = "<p>You won in " + g.Attempts + " attempts!</p>";
+    }
+
+    if (g.Flag === "game_lost") {
+        responseDiv.textContent = "❌ Game Over — The answer was: " + g.Answer;
+
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.textContent = guessText + " — Incorrect";
+        historyList.appendChild(item);
+
+        hintContent.innerHTML = "<p>You used all attempts (" + g.Attempts + ").</p>";
+    }
+
+    input.value = "";
+    selectedMovieId = null;
+    suggestions.innerHTML = "";
+});
 </script>
 
 </body>
