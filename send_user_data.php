@@ -34,24 +34,24 @@ $beforeMtime = file_exists($responseFile) ? filemtime($responseFile) : 0;
 
 try {
     if ($USE_TLS) {
-        $connection = new AMQPStreamConnection(
+        // Use AMQPSSLConnection with proper stream context
+        $sslOptions = [
+            'verify_peer'       => false,
+            'verify_peer_name'  => false,
+            'allow_self_signed' => true,
+        ];
+        
+        $connection = new AMQPSSLConnection(
             $HAPROXY_HOST,
             $PORT_TLS,
             $USERNAME,
             $PASSWORD,
             '/',
-            false,
-            'AMQPLAIN',
-            null,
-            'en_US',
-            3,
-            3,
-            null,
-            true,
+            $sslOptions,
             [
-                'verify_peer'       => false,
-                'verify_peer_name'  => false,
-                'allow_self_signed' => true
+                'connection_timeout' => 3.0,
+                'read_write_timeout' => 3.0,
+                'heartbeat'          => 0,
             ]
         );
     } else {
