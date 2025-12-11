@@ -1,69 +1,92 @@
 <?php
-// Enable error visibility for debugging
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/vendor/autoload.php';
-
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
 session_start();
 
-// RabbitMQ backend2 queue
-$RABBITMQ_HOST = '100.113.228.22';
-$RABBITMQ_PORT = 5672;
+$HAPROXY_HOST = '100.86.66.48';
+$PORT = 5672;
 $USERNAME = 'jol';
 $PASSWORD = 'sysadmin';
-$QUEUE_NAME = 'FRONTEND_TO_BACKEND2';
+$QUEUE = 'FRONTEND_TO_BACKEND2';
 
-// Debug start
-file_put_contents("/var/www/html/start_game_debug.txt", "===== START =====\n", FILE_APPEND);
+$responseFile = '/var/www/html/response_status.json';
 
-// Read raw JSON input
 $raw = file_get_contents("php://input");
-file_put_contents("/var/www/html/start_game_debug.txt", "RAW: $raw\n", FILE_APPEND);
-
 $data = json_decode($raw, true);
 
-// Validate payload
-if (!$data || !isset($data["Flag"]) || $data["Flag"] !== "start_game") {
-    file_put_contents("/var/www/html/start_game_debug.txt", "Invalid payload\n", FILE_APPEND);
-    echo json_encode(["success" => false, "message" => "Invalid payload"]);
+if (!$data || !isset($data["Flag"]) || !in_array($data["Flag"], ["start_daily_game","start_random_game"])) {
+    echo json_encode(["success"=>false,"message"=>"Invalid payload"]);
     exit;
 }
 
+$sessionID = $data["Payload"]["SessionID"] ?? null;
+if (!$sessionID) {
+    echo json_encode(["success"=>false,"message"=>"Missing SessionID"]);
+    exit;
+}
+
+$beforeMtime = file_exists($responseFile) ? filemtime($responseFile) : 0;
+
 try {
-    // Connect to RabbitMQ
-    $conn = new AMQPStreamConnection(
-        $RABBITMQ_HOST,
-        $RABBITMQ_PORT,
-        $USERNAME,
-        $PASSWORD
-    );
-
+    $conn = new AMQPStreamConnection($HAPROXY_HOST,$PORT,$USERNAME,$PASSWORD);
     $channel = $conn->channel();
-    $channel->queue_declare($QUEUE_NAME, false, true, false, false);
+    $channel->queue_declare($QUEUE,false,true,false,false);
 
-    file_put_contents("/var/www/html/start_game_debug.txt", "Publishing to MQ\n", FILE_APPEND);
-
-    // Publish message to Backend2
     $msg = new AMQPMessage($raw);
-    $channel->basic_publish($msg, '', $QUEUE_NAME);
+    $channel->basic_publish($msg,'',$QUEUE);
 
     $channel->close();
     $conn->close();
-
-    file_put_contents("/var/www/html/start_game_debug.txt", "SUCCESS\n", FILE_APPEND);
-
-    echo json_encode(["success" => true, "message" => "Game started"]);
-
 } catch (Exception $e) {
-
-    $err = "RabbitMQ ERROR: " . $e->getMessage() . "\n";
-    file_put_contents("/var/www/html/start_game_debug.txt", $err, FILE_APPEND);
-
-    echo json_encode(["success" => false, "message" => $e->getMessage()]);
+    echo json_encode(["success"=>false,"message"=>"RabbitMQ error: ".$e->getMessage()]);
+    exit;
 }
+
+$timeout = 6;
+$start = microtime(true);
+$response = null;
+
+while (microtime(true)-$start < $timeout) {
+    clearstatcache(true,$responseFile);
+
+    if (file_exists($responseFile)) {
+        $mtime = filemtime($responseFile);
+
+        if ($mtime > $beforeMtime) {
+            $json = json_decode(file_get_contents($responseFile), true);
+
+            if ($json &&
+                isset($json["SessionID"]) &&
+                $json["SessionID"] === $sessionID &&
+                isset($json["Flag"]) &&
+                in_array($json["Flag"], [
+                    "daily_game_started",
+                    "random_game_started",
+                    "daily_already_played"
+                ])
+            ) {
+                $response = $json;
+                break;
+            }
+        }
+    }
+
+    usleep(15000);
+}
+
+if (!$response) {
+    echo json_encode(["success"=>false,"message"=>"No response from backend (timeout)"]);
+    exit;
+}
+
+echo json_encode([
+    "success"=>true,
+    "data"=>$response
+]);
 ?>

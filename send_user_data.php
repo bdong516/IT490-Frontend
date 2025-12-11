@@ -5,23 +5,31 @@ use PhpAmqpLib\Message\AMQPMessage;
 
 session_start();
 
-$RABBITMQ_HOST = '100.113.228.22';
+$HAPROXY_HOST = '100.86.66.48';
 $RABBITMQ_PORT = 5672;
 $USERNAME = 'jol';
 $PASSWORD = 'sysadmin';
 $QUEUE_NAME = 'FRONTEND_TO_BACKEND1';
 
+$responseFile = '/var/www/html/response_status.json';
+
 $raw = file_get_contents("php://input");
 $data = json_decode($raw, true);
 
 if (!$data || !isset($data["Flag"])) {
-    echo json_encode(["success" => false, "message" => "Invalid request"]);
+    echo json_encode(["success" => false, "message" => "Invalid request payload"]);
     exit;
 }
 
-// Send to backend1
+$beforeMtime = file_exists($responseFile) ? filemtime($responseFile) : 0;
+
 try {
-    $conn = new AMQPStreamConnection($RABBITMQ_HOST, $RABBITMQ_PORT, $USERNAME, $PASSWORD);
+    $conn = new AMQPStreamConnection(
+        $HAPROXY_HOST,
+        $RABBITMQ_PORT,
+        $USERNAME,
+        $PASSWORD
+    );
     $channel = $conn->channel();
     $channel->queue_declare($QUEUE_NAME, false, true, false, false);
 
@@ -31,28 +39,37 @@ try {
     $channel->close();
     $conn->close();
 } catch (Exception $e) {
-    echo json_encode(["success" => false, "message" => "RabbitMQ error: ".$e->getMessage()]);
+    echo json_encode(["success" => false, "message" => "RabbitMQ unreachable"]);
     exit;
 }
 
-// Wait for backend2
-$responseFile = "/var/www/html/response_status.json";
 $timeout = 6;
-$start = time();
+$start = microtime(true);
 $response = null;
 
-while (time() - $start < $timeout) {
+while (microtime(true) - $start < $timeout) {
+    clearstatcache(true, $responseFile);
+
     if (file_exists($responseFile)) {
-        $payload = json_decode(file_get_contents($responseFile), true);
-        if ($payload && isset($payload["Flag"])) {
-            $response = $payload;
-            break;
+        $mtime = filemtime($responseFile);
+        if ($mtime > $beforeMtime) {
+            $json = json_decode(file_get_contents($responseFile), true);
+            if ($json && isset($json["Flag"])) {
+                if (in_array($json["Flag"], [
+                    "Login_Accepted",
+                    "Login_Denied",
+                    "Register_Allowed",
+                    "Register_Failed"
+                ])) {
+                    $response = $json;
+                    break;
+                }
+            }
         }
     }
-    usleep(200000);
+    usleep(15000);
 }
 
-// Interpret backend2 responses
 if (!$response) {
     echo json_encode(["success" => false, "message" => "No backend response"]);
     exit;
@@ -62,11 +79,11 @@ switch ($response["Flag"]) {
     case "Login_Accepted":
         $_SESSION["logged_in"] = true;
         $_SESSION["username"] = $response["Username"];
-        $_SESSION["session_id"] = $response["SessionID"];
+        $_SESSION["session_id"] = $response["SessionID"] ?? null;
 
         echo json_encode([
             "success" => true,
-            "message" => "Login successful!",
+            "message" => $response["Message"] ?? "Login successful!",
             "username" => $response["Username"]
         ]);
         break;
@@ -84,6 +101,6 @@ switch ($response["Flag"]) {
         break;
 
     default:
-        echo json_encode(["success" => false, "message" => "Unexpected backend reply"]);
+        echo json_encode(["success" => false, "message" => "Unexpected backend flag"]);
 }
 ?>

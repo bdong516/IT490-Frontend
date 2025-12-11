@@ -1,32 +1,21 @@
-<?php
-session_start();
-
-// If this file exists, frontend1 should be passive, redirect to frontend2
-if (file_exists(__DIR__ . '/.passive')) {
-    header("Location: http://34.31.203.117" . $_SERVER['REQUEST_URI']);
-    exit;
-}
-?>
+<?php session_start(); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Cinemadle | Login</title>
-    <link rel="stylesheet" href="css/styles.css">
+<meta charset="UTF-8">
+<title>Cinemadle | Login</title>
+<link rel="stylesheet" href="css/styles.css?t=<?=time()?>">
 </head>
 
 <body>
 
 <header>
-    <a href="index.php" class="logo">Cinemadle</a>
-    <nav>
-        <a href="register.php">Register</a>
-    </nav>
+    <a href="index.php" class="logo">CINEMADLE</a>
+    <nav><a href="register.php">Register</a></nav>
 </header>
 
-<main class="form-container">
+<main>
     <div class="form-box">
-
         <h1>Login</h1>
 
         <form id="loginForm">
@@ -45,13 +34,14 @@ if (file_exists(__DIR__ . '/.passive')) {
     </div>
 </main>
 
+<footer>© 2025 Cinemadle. All Rights Reserved.</footer>
+
 <script>
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const status = document.getElementById("status");
     status.textContent = "Logging in...";
-    status.className = "";
 
     const username = document.querySelector('[name="username"]').value.trim();
     const password = document.querySelector('[name="password"]').value;
@@ -59,7 +49,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     try {
         const res = await fetch("send_user_data.php", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
                 Flag: "Login_Request",
                 username,
@@ -67,26 +57,17 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             })
         });
 
-        const text = await res.text();
-        console.log("Raw Response:", text);
-
-        let result = JSON.parse(text);
+        const raw = await res.text();
+        const result = JSON.parse(raw);
 
         status.textContent = result.message;
-        status.className = result.success ? "success-msg" : "error-msg";
 
         if (result.success) {
             localStorage.setItem("userEmail", result.username);
-
-            setTimeout(() => {
-                window.location.href = "index.php";
-            }, 1500);
+            setTimeout(() => window.location.href = "index.php", 1200);
         }
-
-    } catch (err) {
-        console.error(err);
+    } catch {
         status.textContent = "Network error.";
-        status.className = "error-msg";
     }
 });
 </script>
