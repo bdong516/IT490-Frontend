@@ -6,26 +6,34 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/vendor/autoload.php';
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
+use Dotenv\Dotenv;
 
 session_start();
 
-$HAPROXY_HOST = '100.86.66.48';
-$PORT = 5672;
-$USERNAME = 'jol';
-$PASSWORD = 'sysadmin';
-$QUEUE = 'FRONTEND_TO_BACKEND2';
+/* Load .env */
+$dotenv = Dotenv::createImmutable('/home/bd293/cinemadle_env');
+$dotenv->load();
 
-$responseFile = '/var/www/html/response_status.json';
+/* RabbitMQ settings */
+$HAPROXY_HOST = $_ENV["HAPROXY_HOST"];
+$PORT         = intval($_ENV["RABBITMQ_PORT_TLS"]);
+$USERNAME     = $_ENV["RABBITMQ_USERNAME"];
+$PASSWORD     = $_ENV["RABBITMQ_PASSWORD"];
+$QUEUE        = $_ENV["QUEUE_FRONTEND_TO_BACKEND2"];
+$responseFile = $_ENV["RESPONSE_FILE"];
 
+/* Read request */
 $raw = file_get_contents("php://input");
 $data = json_decode($raw, true);
 
-if (!$data || !isset($data["Flag"]) || !in_array($data["Flag"], ["start_daily_game","start_random_game"])) {
+if (!$data || !isset($data["Flag"]) ||
+    !in_array($data["Flag"], ["start_daily_game", "start_random_game"])) {
     echo json_encode(["success"=>false,"message"=>"Invalid payload"]);
     exit;
 }
 
 $sessionID = $data["Payload"]["SessionID"] ?? null;
+
 if (!$sessionID) {
     echo json_encode(["success"=>false,"message"=>"Missing SessionID"]);
     exit;
@@ -33,27 +41,50 @@ if (!$sessionID) {
 
 $beforeMtime = file_exists($responseFile) ? filemtime($responseFile) : 0;
 
+/* TLS RabbitMQ publish */
 try {
-    $conn = new AMQPStreamConnection($HAPROXY_HOST,$PORT,$USERNAME,$PASSWORD);
-    $channel = $conn->channel();
-    $channel->queue_declare($QUEUE,false,true,false,false);
+    $connection = new AMQPStreamConnection(
+        $HAPROXY_HOST,
+        $PORT,
+        $USERNAME,
+        $PASSWORD,
+        '/',
+        false,
+        'AMQPLAIN',
+        null,
+        'en_US',
+        3,
+        3,
+        null,
+        true,
+        [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true
+        ]
+    );
+
+    $channel = $connection->channel();
+    $channel->queue_declare($QUEUE, false, true, false, false);
 
     $msg = new AMQPMessage($raw);
-    $channel->basic_publish($msg,'',$QUEUE);
+    $channel->basic_publish($msg, '', $QUEUE);
 
     $channel->close();
-    $conn->close();
+    $connection->close();
+
 } catch (Exception $e) {
-    echo json_encode(["success"=>false,"message"=>"RabbitMQ error: ".$e->getMessage()]);
+    echo json_encode(["success"=>false,"message"=>"RabbitMQ TLS connection failed"]);
     exit;
 }
 
+/* Wait for backend2 response */
 $timeout = 6;
 $start = microtime(true);
 $response = null;
 
 while (microtime(true)-$start < $timeout) {
-    clearstatcache(true,$responseFile);
+    clearstatcache(true, $responseFile);
 
     if (file_exists($responseFile)) {
         $mtime = filemtime($responseFile);
@@ -81,7 +112,7 @@ while (microtime(true)-$start < $timeout) {
 }
 
 if (!$response) {
-    echo json_encode(["success"=>false,"message"=>"No response from backend (timeout)"]);
+    echo json_encode(["success"=>false,"message"=>"No response from backend"]);
     exit;
 }
 

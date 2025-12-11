@@ -1,18 +1,25 @@
 <?php
 require_once __DIR__ . '/vendor/autoload.php';
+
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
+use Dotenv\Dotenv;
 
 session_start();
 
-$HAPROXY_HOST = '100.86.66.48';
-$RABBITMQ_PORT = 5672;
-$USERNAME = 'jol';
-$PASSWORD = 'sysadmin';
-$QUEUE_NAME = 'FRONTEND_TO_BACKEND1';
+/* Load secure environment variables */
+$dotenv = Dotenv::createImmutable('/home/bd293/cinemadle_env');
+$dotenv->load();
 
-$responseFile = '/var/www/html/response_status.json';
+/* Read RabbitMQ settings from .env (TLS ALWAYS ON) */
+$HAPROXY_HOST = $_ENV["HAPROXY_HOST"];
+$PORT         = intval($_ENV["RABBITMQ_PORT_TLS"]);   // TLS port 5671
+$USERNAME     = $_ENV["RABBITMQ_USERNAME"];
+$PASSWORD     = $_ENV["RABBITMQ_PASSWORD"];
+$QUEUE_NAME   = $_ENV["QUEUE_FRONTEND_TO_BACKEND1"];
+$responseFile = $_ENV["RESPONSE_FILE"];
 
+/* Read incoming JSON */
 $raw = file_get_contents("php://input");
 $data = json_decode($raw, true);
 
@@ -23,26 +30,44 @@ if (!$data || !isset($data["Flag"])) {
 
 $beforeMtime = file_exists($responseFile) ? filemtime($responseFile) : 0;
 
+/* ------- TLS RabbitMQ Connection & Publish ------- */
 try {
-    $conn = new AMQPStreamConnection(
+    $connection = new AMQPStreamConnection(
         $HAPROXY_HOST,
-        $RABBITMQ_PORT,
+        $PORT,
         $USERNAME,
-        $PASSWORD
+        $PASSWORD,
+        '/',
+        false,
+        'AMQPLAIN',
+        null,
+        'en_US',
+        3,
+        3,
+        null,
+        true,   // TLS enabled
+        [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true
+        ]
     );
-    $channel = $conn->channel();
+
+    $channel = $connection->channel();
     $channel->queue_declare($QUEUE_NAME, false, true, false, false);
 
     $msg = new AMQPMessage($raw);
     $channel->basic_publish($msg, '', $QUEUE_NAME);
 
     $channel->close();
-    $conn->close();
+    $connection->close();
+
 } catch (Exception $e) {
-    echo json_encode(["success" => false, "message" => "RabbitMQ unreachable"]);
+    echo json_encode(["success" => false, "message" => "RabbitMQ TLS connection failed"]);
     exit;
 }
 
+/* ---------- Wait for backend1 login/register response ---------- */
 $timeout = 6;
 $start = microtime(true);
 $response = null;
@@ -52,8 +77,10 @@ while (microtime(true) - $start < $timeout) {
 
     if (file_exists($responseFile)) {
         $mtime = filemtime($responseFile);
+
         if ($mtime > $beforeMtime) {
             $json = json_decode(file_get_contents($responseFile), true);
+
             if ($json && isset($json["Flag"])) {
                 if (in_array($json["Flag"], [
                     "Login_Accepted",
@@ -75,10 +102,12 @@ if (!$response) {
     exit;
 }
 
+/* ---------- Build output for frontend ---------- */
 switch ($response["Flag"]) {
+
     case "Login_Accepted":
         $_SESSION["logged_in"] = true;
-        $_SESSION["username"] = $response["Username"];
+        $_SESSION["username"]  = $response["Username"];
         $_SESSION["session_id"] = $response["SessionID"] ?? null;
 
         echo json_encode([
@@ -89,18 +118,30 @@ switch ($response["Flag"]) {
         break;
 
     case "Login_Denied":
-        echo json_encode(["success" => false, "message" => "Invalid username or password"]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Invalid username or password"
+        ]);
         break;
 
     case "Register_Allowed":
-        echo json_encode(["success" => true, "message" => "Registration successful!"]);
+        echo json_encode([
+            "success" => true,
+            "message" => "Registration successful!"
+        ]);
         break;
 
     case "Register_Failed":
-        echo json_encode(["success" => false, "message" => "Registration failed"]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Registration failed"
+        ]);
         break;
 
     default:
-        echo json_encode(["success" => false, "message" => "Unexpected backend flag"]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Unexpected backend flag"
+        ]);
 }
 ?>
