@@ -10,10 +10,10 @@ from dotenv import load_dotenv
 # Load environment
 load_dotenv("/home/bd293/cinemadle_env/.env")
 
-HAPROXY_HOST = os.getenv("RABBIT_HOST")
-PORT_TLS     = int(os.getenv("RABBIT_TLS_PORT", "5671"))
-USERNAME     = os.getenv("RABBIT_USERNAME")
-PASSWORD     = os.getenv("RABBIT_PASSWORD")
+HAPROXY_HOST = os.getenv("HAPROXY_HOST")
+PORT_TLS     = int(os.getenv("RABBITMQ_PORT_TLS", "5671"))
+USERNAME     = os.getenv("RABBITMQ_USERNAME")
+PASSWORD     = os.getenv("RABBITMQ_PASSWORD")
 
 QUEUE_NAME   = os.getenv("QUEUE_BACKEND2_TO_FRONT")  # should be BACKEND2_TO_FRONT
 
