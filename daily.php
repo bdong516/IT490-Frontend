@@ -12,6 +12,9 @@ $alreadyPlayed = isset($_GET['already']) || (
 <head>
 <meta charset="UTF-8">
 <title>Cinemadle | Daily Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/game.css">
 </head>
@@ -40,7 +43,7 @@ $alreadyPlayed = isset($_GET['already']) || (
         <div class="summary-box">
             <h2>You Already Played Today!</h2>
             <p id="alreadyPlayedMessage">Come back tomorrow for a new challenge.</p>
-            <a href="random.php" class="primary-btn">Play Random Mode</a>
+            <button id="playRandomBtn" class="primary-btn">Play Random Mode</button>
         </div>
 
         <script>
@@ -53,6 +56,39 @@ $alreadyPlayed = isset($_GET['already']) || (
                 sessionStorage.removeItem("dailyAlreadyPlayedMessage");
                 sessionStorage.removeItem("dailyAlreadyPlayedDate");
             }
+
+            // Handle Play Random Mode button
+            document.getElementById("playRandomBtn").addEventListener("click", async () => {
+                let sessionID = localStorage.getItem("cinemadleSessionID");
+                if (!sessionID) {
+                    sessionID = crypto.randomUUID();
+                    localStorage.setItem("cinemadleSessionID", sessionID);
+                }
+
+                const payload = {
+                    Flag: "start_random_game",
+                    Payload: {
+                        SessionID: sessionID,
+                        Username: "<?php echo htmlspecialchars($username); ?>"
+                    }
+                };
+
+                const res = await fetch("start_game.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const out = await res.json();
+
+                if (out.success && out.data.Poster) {
+                    sessionStorage.setItem("gamePosterURL", out.data.Poster);
+                }
+
+                if (out.success && out.data.Flag === "random_game_started") {
+                    window.location.href = "game.php?mode=random";
+                }
+            });
         </script>
 
     <?php else: ?>
