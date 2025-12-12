@@ -21,7 +21,7 @@ $mode = $_GET['mode'] ?? "random";
     <a href="index.php" class="logo">CINEMADLE</a>
     <nav>
         <?php if (!empty($_SESSION["logged_in"])): ?>
-            <span><?php echo htmlspecialchars($username); ?></span>
+            <span><?php echo htmlspecialchars($_SESSION['email']); ?></span>
             <a href="logout.php">Logout</a>
         <?php else: ?>
             <a href="login.php">Login</a>
@@ -39,6 +39,8 @@ $mode = $_GET['mode'] ?? "random";
     <?php else: ?>
         <h1>Guess the Movie!</h1>
     <?php endif; ?>
+
+    <img id="moviePoster" class="poster" style="display:none;" alt="Movie Poster">
 
     <form id="guessForm" autocomplete="off">
         <div class="guess-wrapper">
@@ -59,9 +61,14 @@ $mode = $_GET['mode'] ?? "random";
         <h3>Hints</h3>
         <div id="hintContent">Make a guess to see hints!</div>
     </div>
+
+    <div id="playAgainBox" style="display:none; text-align:center; margin-top:30px;">
+        <button id="playAgainBtn" class="primary-btn"></button>
+    </div>
 </main>
 
 <script>
+const gameMode = "<?php echo $mode; ?>";
 let sessionID = localStorage.getItem("cinemadleSessionID");
 if (!sessionID) {
     sessionID = crypto.randomUUID();
@@ -168,7 +175,7 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
         hintContent.innerHTML = hintHTML;
     }
 
-    if (g.Flag === "game_win") {
+    if (g.Flag === "game_over") {
         responseDiv.textContent = "🎉 Correct! The movie was: " + g.Answer;
 
         const item = document.createElement("div");
@@ -177,6 +184,20 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
         historyList.appendChild(item);
 
         hintContent.innerHTML = "<p>You won in " + g.Attempts + " attempts!</p>";
+
+        // Display poster when game ends
+        const posterURL = sessionStorage.getItem("gamePosterURL");
+        if (posterURL) {
+            const posterImg = document.getElementById("moviePoster");
+            posterImg.src = posterURL;
+            posterImg.style.display = "block";
+        }
+
+        // Hide form when game ends
+        document.getElementById("guessForm").style.display = "none";
+
+        // Show play again button
+        showPlayAgainButton();
     }
 
     if (g.Flag === "game_lost") {
@@ -188,12 +209,67 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
         historyList.appendChild(item);
 
         hintContent.innerHTML = "<p>You used all attempts (" + g.Attempts + ").</p>";
+
+        // Display poster when game ends
+        const posterURL = sessionStorage.getItem("gamePosterURL");
+        if (posterURL) {
+            const posterImg = document.getElementById("moviePoster");
+            posterImg.src = posterURL;
+            posterImg.style.display = "block";
+        }
+
+        // Hide form when game ends
+        document.getElementById("guessForm").style.display = "none";
+
+        // Show play again button
+        showPlayAgainButton();
     }
 
     input.value = "";
     selectedMovieId = null;
     suggestions.innerHTML = "";
 });
+
+// Function to show appropriate play again button based on game mode
+function showPlayAgainButton() {
+    const playAgainBox = document.getElementById("playAgainBox");
+    const playAgainBtn = document.getElementById("playAgainBtn");
+
+    if (gameMode === "daily") {
+        playAgainBtn.textContent = "Play Random Mode";
+    } else {
+        playAgainBtn.textContent = "Play Again!";
+    }
+
+    playAgainBox.style.display = "block";
+
+    playAgainBtn.addEventListener("click", async () => {
+        const payload = {
+            Flag: "start_random_game",
+            Payload: {
+                SessionID: sessionID,
+                Username: username
+            }
+        };
+
+        const res = await fetch("start_game.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const out = await res.json();
+
+        if (out.success && out.data.Poster) {
+            sessionStorage.setItem("gamePosterURL", out.data.Poster);
+        }
+
+        if (out.success && out.data.Flag === "random_game_started") {
+            window.location.href = "game.php?mode=random";
+        }
+    });
+}
+
 </script>
 
 </body>
