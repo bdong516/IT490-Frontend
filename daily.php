@@ -25,6 +25,7 @@ $alreadyPlayed = isset($_GET['already']) || (
     <a href="index.php" class="logo">CINEMADLE</a>
     <nav>
         <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+            <a href="profile.php">👤 Profile</a>
             <span><?php echo htmlspecialchars($_SESSION['email']); ?></span>
             <a href="logout.php">Logout</a>
         <?php else: ?>

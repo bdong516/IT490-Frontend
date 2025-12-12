@@ -19,6 +19,7 @@ session_start();
   <a href="index.php" class="logo">CINEMADLE</a>
   <nav>
     <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+      <a href="profile.php">👤 Profile</a>
       <a href="logout.php">Logout</a>
     <?php else: ?>
       <a href="login.php">Login</a>
