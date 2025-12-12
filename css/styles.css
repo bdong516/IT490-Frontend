@@ -57,6 +57,7 @@ header, main, footer, .carousel-container {
   position: relative;
   border-top: 1px solid rgba(244, 196, 48, 0.3);
   border-bottom: 1px solid rgba(244, 196, 48, 0.3);
+  box-sizing: border-box;
 }
 
 /* Film strip perforations */
@@ -75,7 +76,8 @@ header, main, footer, .carousel-container {
     transparent 12px,
     transparent 20px
   );
-  z-index: 3;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .film-strip-top {
@@ -92,20 +94,26 @@ header, main, footer, .carousel-container {
   content: "";
   position: absolute;
   top: 0;
-  width: 100px;
+  width: 150px;
   height: 100%;
-  z-index: 3;
+  z-index: 10;
   pointer-events: none;
 }
 
 .carousel-container::before {
   left: 0;
-  background: linear-gradient(to right, rgba(22, 33, 62, 0.9), transparent);
+  background: linear-gradient(to right, 
+    rgba(26, 26, 46, 1) 0%, 
+    rgba(22, 33, 62, 0.8) 30%,
+    transparent 100%);
 }
 
 .carousel-container::after {
   right: 0;
-  background: linear-gradient(to left, rgba(22, 33, 62, 0.9), transparent);
+  background: linear-gradient(to left, 
+    rgba(26, 26, 46, 1) 0%, 
+    rgba(22, 33, 62, 0.8) 30%,
+    transparent 100%);
 }
 
 .carousel-track {
@@ -114,6 +122,8 @@ header, main, footer, .carousel-container {
   padding: 15px 0;
   min-height: 180px;
   align-items: center;
+  width: fit-content;
+  will-change: transform;
 }
 
 .carousel-track-left {
@@ -151,12 +161,14 @@ header, main, footer, .carousel-container {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   object-fit: cover;
   border: 2px solid rgba(244, 196, 48, 0.3);
+  display: block;
 }
 
 .carousel-poster:hover {
   transform: scale(1.05);
   box-shadow: 0 6px 20px rgba(244, 196, 48, 0.4);
   border-color: var(--cinema-gold);
+  z-index: 5;
 }
 
 .carousel-placeholder {
@@ -170,10 +182,11 @@ header, main, footer, .carousel-container {
   align-items: center;
   justify-content: center;
   color: rgba(244, 196, 48, 0.5);
-  font-size: 14px;
+  font-size: 12px;
   text-align: center;
   padding: 10px;
   font-family: var(--font-secondary);
+  box-sizing: border-box;
 }
 
 header {
@@ -538,6 +551,10 @@ footer {
   }
 
   /* Carousel adjustments */
+  .carousel-container {
+    padding: 15px 0;
+  }
+
   .carousel-poster,
   .carousel-placeholder {
     width: 100px;
@@ -547,11 +564,17 @@ footer {
   .carousel-track {
     gap: 15px;
     min-height: 150px;
+    padding: 10px 0;
   }
 
   .carousel-container::before,
   .carousel-container::after {
-    width: 50px;
+    width: 80px;
+  }
+
+  .carousel-placeholder {
+    font-size: 11px;
+    padding: 8px;
   }
 
   main {
@@ -594,6 +617,10 @@ footer {
   }
 
   /* Carousel adjustments */
+  .carousel-container {
+    padding: 10px 0;
+  }
+
   .carousel-poster,
   .carousel-placeholder {
     width: 80px;
@@ -603,10 +630,16 @@ footer {
   .carousel-track {
     gap: 10px;
     min-height: 120px;
+    padding: 8px 0;
+  }
+
+  .carousel-container::before,
+  .carousel-container::after {
+    width: 50px;
   }
 
   .carousel-placeholder {
-    font-size: 11px;
+    font-size: 10px;
     padding: 5px;
   }
 
