@@ -12,21 +12,7 @@ $mode = $_GET['mode'] ?? "random";
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
-
-<style>
-.game-container { max-width: 750px; margin: 2rem auto; text-align: center; }
-.guess-wrapper { position: relative; width: 100%; max-width: 420px; margin: 0 auto; }
-#guessInput { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
-#suggestions { list-style: none; padding: 0; margin: 0; border: 1px solid #ccc; border-top: none; background: #ffffff; width: 100%; position: absolute; z-index: 8000; max-height: 200px; overflow-y: auto; }
-#suggestions li { padding: 10px; cursor: pointer; }
-#suggestions li:hover { background: #148B18; color: white; }
-#historyBox { margin-top: 25px; padding: 15px; background: #f1f1f1; border: 1px solid #ccc; border-radius: 8px; max-height: 260px; overflow-y: auto; text-align: left; }
-.history-item { padding: 10px; margin-bottom: 8px; background: #ffffff; border-left: 5px solid #148B18; border-radius: 6px; }
-#hintBox { margin-top: 25px; padding: 15px; background: #e7f5e9; border: 1px solid #148B18; border-radius: 8px; text-align: left; }
-button { margin-top: 15px; padding: 10px 18px; background: #148B18; border: none; border-radius: 6px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
-button:hover { background: #0f6611; }
-#responseArea { margin-top: 18px; font-size: 18px; font-weight: bold; min-height: 32px; }
-</style>
+<link rel="stylesheet" href="css/game.css">
 </head>
 
 <body>

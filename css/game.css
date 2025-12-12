@@ -331,3 +331,70 @@
     font-family: "Inter", sans-serif;
     opacity: 0.9;
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .game-container {
+        margin: 20px auto;
+        padding: 15px;
+    }
+
+    .page-title {
+        font-size: 36px;
+    }
+
+    .subtitle {
+        font-size: 16px;
+    }
+
+    .poster {
+        width: 200px;
+        height: 300px;
+    }
+
+    .guess-wrapper {
+        max-width: 100%;
+    }
+
+    .panel {
+        width: 95%;
+        padding: 20px;
+    }
+
+    .summary-box {
+        width: 95%;
+        padding: 25px;
+    }
+
+    .summary-box h2 {
+        font-size: 26px;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-title {
+        font-size: 28px;
+    }
+
+    .subtitle {
+        font-size: 14px;
+    }
+
+    .poster {
+        width: 180px;
+        height: 270px;
+    }
+
+    .primary-btn {
+        padding: 12px 24px;
+        font-size: 14px;
+    }
+
+    .panel h3 {
+        font-size: 18px;
+    }
+
+    .summary-box h2 {
+        font-size: 22px;
+    }
+}
