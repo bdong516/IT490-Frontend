@@ -136,19 +136,19 @@ header, main, footer, .carousel-container {
 
 @keyframes scrollLeft {
   0% {
-    transform: translateX(0);
+    transform: translateX(10%);
   }
   100% {
-    transform: translateX(-50%);
+    transform: translateX(-40%);
   }
 }
 
 @keyframes scrollRight {
   0% {
-    transform: translateX(-50%);
+    transform: translateX(-40%);
   }
   100% {
-    transform: translateX(0);
+    transform: translateX(10%);
   }
 }
 
@@ -270,7 +270,7 @@ nav a:hover::after {
 main {
   max-width: 900px;
   margin: 0 auto;
-  padding: 40px 20px 30px;
+  padding: 30px 20px 30px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -281,7 +281,7 @@ main {
   font-size: 48px;
   font-weight: 700;
   color: var(--cinema-gold);
-  margin: 50px 0 40px;
+  margin: 20px 0 30px;
   text-shadow: 3px 3px 6px var(--cinema-shadow),
                0 0 20px rgba(244, 196, 48, 0.4);
   letter-spacing: 2px;
