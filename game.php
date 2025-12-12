@@ -40,6 +40,8 @@ $mode = $_GET['mode'] ?? "random";
         <h1>Guess the Movie!</h1>
     <?php endif; ?>
 
+    <img id="moviePoster" class="poster" style="display:none;" alt="Movie Poster">
+
     <form id="guessForm" autocomplete="off">
         <div class="guess-wrapper">
             <input type="text" id="guessInput" placeholder="Enter your guess..." required>
@@ -177,6 +179,14 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
         historyList.appendChild(item);
 
         hintContent.innerHTML = "<p>You won in " + g.Attempts + " attempts!</p>";
+
+        // Display poster when game ends
+        const posterURL = sessionStorage.getItem("gamePosterURL");
+        if (posterURL) {
+            const posterImg = document.getElementById("moviePoster");
+            posterImg.src = posterURL;
+            posterImg.style.display = "block";
+        }
     }
 
     if (g.Flag === "game_lost") {
@@ -188,6 +198,14 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
         historyList.appendChild(item);
 
         hintContent.innerHTML = "<p>You used all attempts (" + g.Attempts + ").</p>";
+
+        // Display poster when game ends
+        const posterURL = sessionStorage.getItem("gamePosterURL");
+        if (posterURL) {
+            const posterImg = document.getElementById("moviePoster");
+            posterImg.src = posterURL;
+            posterImg.style.display = "block";
+        }
     }
 
     input.value = "";

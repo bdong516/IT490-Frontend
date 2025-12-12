@@ -85,6 +85,11 @@ window.onload = () => {
 
         const data = out.data;
 
+        // Store poster URL for display when game ends
+        if (data.Poster) {
+            sessionStorage.setItem("gamePosterURL", data.Poster);
+        }
+
         if (data.Flag === "daily_already_played") {
             window.location.href = "game.php?mode=daily_summary";
             return;
