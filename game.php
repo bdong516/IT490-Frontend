@@ -168,7 +168,7 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
         hintContent.innerHTML = hintHTML;
     }
 
-    if (g.Flag === "game_win") {
+    if (g.Flag === "game_over") {
         responseDiv.textContent = "🎉 Correct! The movie was: " + g.Answer;
 
         const item = document.createElement("div");
