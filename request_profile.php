@@ -82,7 +82,7 @@ while (microtime(true) - $start < $timeout) {
             }
         }
     }
-    usleep(100000); // 100ms
+    usleep(250000); // 100ms
 }
 
 if (!$response) {
