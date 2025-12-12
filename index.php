@@ -27,6 +27,18 @@ session_start();
   </nav>
 </header>
 
+<!-- Movie Poster Carousel -->
+<div class="carousel-container">
+  <div class="film-strip-top"></div>
+  <div class="carousel-track carousel-track-left" id="carouselTrack1">
+    <!-- Posters will be dynamically inserted here -->
+  </div>
+  <div class="carousel-track carousel-track-right" id="carouselTrack2">
+    <!-- Posters will be dynamically inserted here -->
+  </div>
+  <div class="film-strip-bottom"></div>
+</div>
+
 <main>
   <h1 id="greeting">Hello!</h1>
 
@@ -34,7 +46,29 @@ session_start();
     <button class="game-btn" id="startDailyBtn">📅 Daily Game</button>
     <button class="game-btn" id="startRandomBtn">🎬 Random Game</button>
   </div>
+
+  <button class="game-btn" id="showLeaderboardBtn" style="margin-top: 20px;">🏆 Show Leaderboard</button>
 </main>
+
+<!-- Leaderboard Modal -->
+<div id="leaderboardModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="modal-close">&times;</span>
+    <h2 class="modal-title">🏆 Leaderboard - Most Wins</h2>
+    <table id="leaderboardTable">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Player</th>
+          <th>Wins</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="3">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 <footer>
   © 2025 Cinemadle. All Rights Reserved.
@@ -60,6 +94,53 @@ window.onload = () => {
         sessionID = generateUUID();
         localStorage.setItem("cinemadleSessionID", sessionID);
     }
+
+    // Load and populate carousel
+    function loadCarousel() {
+        const carouselPosters = JSON.parse(localStorage.getItem("carouselPosters")) || [];
+        const track1 = document.getElementById("carouselTrack1");
+        const track2 = document.getElementById("carouselTrack2");
+        
+        // Clear existing content
+        track1.innerHTML = "";
+        track2.innerHTML = "";
+        
+        if (carouselPosters.length === 0) {
+            // Show placeholders if no posters yet
+            for (let i = 0; i < 8; i++) {
+                const placeholder1 = document.createElement("div");
+                placeholder1.className = "carousel-placeholder";
+                placeholder1.textContent = "Play games to collect posters";
+                track1.appendChild(placeholder1);
+                
+                const placeholder2 = document.createElement("div");
+                placeholder2.className = "carousel-placeholder";
+                placeholder2.textContent = "Play games to collect posters";
+                track2.appendChild(placeholder2);
+            }
+        } else {
+            // Duplicate posters for infinite scroll effect
+            const duplicatedPosters = [...carouselPosters, ...carouselPosters, ...carouselPosters];
+            
+            duplicatedPosters.forEach(posterURL => {
+                const img1 = document.createElement("img");
+                img1.src = posterURL;
+                img1.className = "carousel-poster";
+                img1.alt = "Movie Poster";
+                track1.appendChild(img1);
+            });
+            
+            duplicatedPosters.forEach(posterURL => {
+                const img2 = document.createElement("img");
+                img2.src = posterURL;
+                img2.className = "carousel-poster";
+                img2.alt = "Movie Poster";
+                track2.appendChild(img2);
+            });
+        }
+    }
+    
+    loadCarousel();
 
     async function startGame(flag) {
         const payload = {
@@ -120,6 +201,73 @@ window.onload = () => {
 
     randomBtn.addEventListener("click", () => {
         startGame("start_random_game");
+    });
+
+    // Leaderboard functionality
+    const leaderboardBtn = document.getElementById("showLeaderboardBtn");
+    const leaderboardModal = document.getElementById("leaderboardModal");
+    const modalClose = document.querySelector(".modal-close");
+
+    leaderboardBtn.addEventListener("click", async () => {
+        leaderboardModal.style.display = "flex";
+        
+        const currentUser = userEmail || "guest";
+        
+        const payload = {
+            Flag: "request_leaderboard",
+            Payload: {
+                Type: "wins",
+                Username: currentUser
+            }
+        };
+
+        try {
+            const res = await fetch("request_leaderboard.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const out = await res.json();
+
+            if (out.success && out.data.Flag === "leaderboard_data") {
+                const users = out.data.Payload.Users;
+                const tbody = document.querySelector("#leaderboardTable tbody");
+                tbody.innerHTML = "";
+
+                if (users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">No data available</td></tr>';
+                } else {
+                    users.forEach((user, i) => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${i + 1}</td>
+                                <td>${user.Username}</td>
+                                <td>${user.Wins}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            } else {
+                const tbody = document.querySelector("#leaderboardTable tbody");
+                tbody.innerHTML = '<tr><td colspan="3">Failed to load leaderboard</td></tr>';
+            }
+        } catch (error) {
+            const tbody = document.querySelector("#leaderboardTable tbody");
+            tbody.innerHTML = '<tr><td colspan="3">Error loading leaderboard</td></tr>';
+        }
+    });
+
+    // Close modal on X click
+    modalClose.addEventListener("click", () => {
+        leaderboardModal.style.display = "none";
+    });
+
+    // Close modal on outside click
+    leaderboardModal.addEventListener("click", (e) => {
+        if (e.target === leaderboardModal) {
+            leaderboardModal.style.display = "none";
+        }
     });
 };
 </script>

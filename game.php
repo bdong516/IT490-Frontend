@@ -77,6 +77,27 @@ if (!sessionID) {
 
 const username = "<?php echo $username; ?>";
 
+// Helper function to add poster to carousel collection
+function addPosterToCarousel(posterURL) {
+    try {
+        let carouselPosters = JSON.parse(localStorage.getItem("carouselPosters")) || [];
+        
+        // Avoid duplicates
+        if (!carouselPosters.includes(posterURL)) {
+            carouselPosters.push(posterURL);
+            
+            // Keep only last 20 posters
+            if (carouselPosters.length > 20) {
+                carouselPosters = carouselPosters.slice(-20);
+            }
+            
+            localStorage.setItem("carouselPosters", JSON.stringify(carouselPosters));
+        }
+    } catch (error) {
+        console.error("Failed to save poster to carousel:", error);
+    }
+}
+
 let movies = [];
 async function loadMovies() {
     const r = await fetch("movies.json");
@@ -191,6 +212,9 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
             const posterImg = document.getElementById("moviePoster");
             posterImg.src = posterURL;
             posterImg.style.display = "block";
+            
+            // Add poster to carousel collection
+            addPosterToCarousel(posterURL);
         }
 
         // Hide form when game ends
@@ -216,6 +240,9 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
             const posterImg = document.getElementById("moviePoster");
             posterImg.src = posterURL;
             posterImg.style.display = "block";
+            
+            // Add poster to carousel collection
+            addPosterToCarousel(posterURL);
         }
 
         // Hide form when game ends
