@@ -3,22 +3,15 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
-use Dotenv\Dotenv;
-
 session_start();
 
-$dotenv = Dotenv::createImmutable('/home/bd293/cinemadle_env');
-$dotenv->load();
-
-$HAPROXY_HOST = $_ENV['HAPROXY_HOST'] ?? '100.86.66.48';
-$PORT_PLAIN   = isset($_ENV['RABBITMQ_PORT']) ? (int)$_ENV['RABBITMQ_PORT'] : 5672;
+$HAPROXY_HOST = '100.86.66.48';
+$PORT_PLAIN   = 5672;
 $USE_TLS      = false;
-
-$USERNAME   = $_ENV['RABBITMQ_USERNAME'] ?? 'jol';
-$PASSWORD   = $_ENV['RABBITMQ_PASSWORD'] ?? 'sysadmin';
-$QUEUE_NAME = $_ENV['QUEUE_FRONTEND_TO_BACKEND2'] ?? 'FRONTEND_TO_BACKEND2';
-
-$responseFile = $_ENV['RESPONSE_FILE'] ?? '/var/www/html/response_status.json';
+$USERNAME     = 'jol';
+$PASSWORD     = 'sysadmin';
+$QUEUE_NAME   = 'FRONTEND_TO_BACKEND2';
+$responseFile = '/var/www/html/response_status.json';
 
 $raw  = file_get_contents('php://input');
 $data = json_decode($raw, true);
