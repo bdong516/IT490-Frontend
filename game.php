@@ -187,6 +187,9 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
             posterImg.src = posterURL;
             posterImg.style.display = "block";
         }
+
+        // Hide form when game ends
+        document.getElementById("guessForm").style.display = "none";
     }
 
     if (g.Flag === "game_lost") {
@@ -206,6 +209,9 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
             posterImg.src = posterURL;
             posterImg.style.display = "block";
         }
+
+        // Hide form when game ends
+        document.getElementById("guessForm").style.display = "none";
     }
 
     input.value = "";
