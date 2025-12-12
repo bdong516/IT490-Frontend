@@ -91,7 +91,10 @@ window.onload = () => {
         }
 
         if (data.Flag === "daily_already_played") {
-            window.location.href = "game.php?mode=daily_summary";
+            // Store the message from backend
+            sessionStorage.setItem("dailyAlreadyPlayedMessage", data.Message || "You already played the daily for today.");
+            sessionStorage.setItem("dailyAlreadyPlayedDate", data.Date || "");
+            window.location.href = "daily.php?already=1";
             return;
         }
 

@@ -39,9 +39,21 @@ $alreadyPlayed = isset($_GET['already']) || (
 
         <div class="summary-box">
             <h2>You Already Played Today!</h2>
-            <p>Come back tomorrow for a new challenge.</p>
+            <p id="alreadyPlayedMessage">Come back tomorrow for a new challenge.</p>
             <a href="random.php" class="primary-btn">Play Random Mode</a>
         </div>
+
+        <script>
+            // Display backend message if available
+            const backendMessage = sessionStorage.getItem("dailyAlreadyPlayedMessage");
+            const playedDate = sessionStorage.getItem("dailyAlreadyPlayedDate");
+            if (backendMessage) {
+                document.getElementById("alreadyPlayedMessage").textContent = backendMessage;
+                // Clear the stored message
+                sessionStorage.removeItem("dailyAlreadyPlayedMessage");
+                sessionStorage.removeItem("dailyAlreadyPlayedDate");
+            }
+        </script>
 
     <?php else: ?>
 
