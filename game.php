@@ -45,7 +45,7 @@ $mode = $_GET['mode'] ?? "random";
             <input type="text" id="guessInput" placeholder="Enter your guess..." required>
             <ul id="suggestions"></ul>
         </div>
-        <button type="submit">Submit Guess</button>
+        <button type="submit" class="primary-btn">Submit Guess</button>
     </form>
 
     <div id="responseArea"></div>
