@@ -27,6 +27,18 @@ session_start();
   </nav>
 </header>
 
+<!-- Movie Poster Carousel -->
+<div class="carousel-container">
+  <div class="film-strip-top"></div>
+  <div class="carousel-track carousel-track-left" id="carouselTrack1">
+    <!-- Posters will be dynamically inserted here -->
+  </div>
+  <div class="carousel-track carousel-track-right" id="carouselTrack2">
+    <!-- Posters will be dynamically inserted here -->
+  </div>
+  <div class="film-strip-bottom"></div>
+</div>
+
 <main>
   <h1 id="greeting">Hello!</h1>
 
@@ -82,6 +94,53 @@ window.onload = () => {
         sessionID = generateUUID();
         localStorage.setItem("cinemadleSessionID", sessionID);
     }
+
+    // Load and populate carousel
+    function loadCarousel() {
+        const carouselPosters = JSON.parse(localStorage.getItem("carouselPosters")) || [];
+        const track1 = document.getElementById("carouselTrack1");
+        const track2 = document.getElementById("carouselTrack2");
+        
+        // Clear existing content
+        track1.innerHTML = "";
+        track2.innerHTML = "";
+        
+        if (carouselPosters.length === 0) {
+            // Show placeholders if no posters yet
+            for (let i = 0; i < 8; i++) {
+                const placeholder1 = document.createElement("div");
+                placeholder1.className = "carousel-placeholder";
+                placeholder1.textContent = "Play games to collect posters";
+                track1.appendChild(placeholder1);
+                
+                const placeholder2 = document.createElement("div");
+                placeholder2.className = "carousel-placeholder";
+                placeholder2.textContent = "Play games to collect posters";
+                track2.appendChild(placeholder2);
+            }
+        } else {
+            // Duplicate posters for infinite scroll effect
+            const duplicatedPosters = [...carouselPosters, ...carouselPosters, ...carouselPosters];
+            
+            duplicatedPosters.forEach(posterURL => {
+                const img1 = document.createElement("img");
+                img1.src = posterURL;
+                img1.className = "carousel-poster";
+                img1.alt = "Movie Poster";
+                track1.appendChild(img1);
+            });
+            
+            duplicatedPosters.forEach(posterURL => {
+                const img2 = document.createElement("img");
+                img2.src = posterURL;
+                img2.className = "carousel-poster";
+                img2.alt = "Movie Poster";
+                track2.appendChild(img2);
+            });
+        }
+    }
+    
+    loadCarousel();
 
     async function startGame(flag) {
         const payload = {
