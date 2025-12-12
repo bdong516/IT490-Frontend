@@ -461,3 +461,134 @@ footer {
     padding: 25px 20px;
   }
 }
+
+/* Leaderboard Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background: linear-gradient(135deg, rgba(22, 33, 62, 0.98) 0%, rgba(26, 26, 46, 0.98) 100%);
+  padding: 40px;
+  border-radius: 12px;
+  border: 2px solid var(--cinema-gold);
+  box-shadow: 0 10px 40px var(--cinema-shadow),
+              0 0 0 2px var(--cinema-gold);
+  max-width: 600px;
+  width: 90%;
+  position: relative;
+  animation: slideInDown 0.4s ease;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-close {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--cinema-gold);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: var(--cinema-amber);
+  transform: scale(1.2);
+}
+
+.modal-title {
+  color: var(--cinema-gold);
+  font-family: "Playfair Display", serif;
+  font-size: 32px;
+  margin-top: 0;
+  margin-bottom: 30px;
+  text-align: center;
+  text-shadow: 2px 2px 4px var(--cinema-shadow),
+               0 0 15px rgba(244, 196, 48, 0.3);
+}
+
+#leaderboardTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-family: var(--font-secondary);
+}
+
+#leaderboardTable thead {
+  background: rgba(244, 196, 48, 0.15);
+  border-bottom: 2px solid var(--cinema-gold);
+}
+
+#leaderboardTable th {
+  padding: 15px;
+  text-align: center;
+  color: var(--cinema-gold);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+#leaderboardTable tbody tr {
+  border-bottom: 1px solid rgba(244, 196, 48, 0.2);
+  transition: all 0.3s ease;
+}
+
+#leaderboardTable tbody tr:hover {
+  background: rgba(244, 196, 48, 0.1);
+}
+
+#leaderboardTable tbody tr:last-child {
+  border-bottom: none;
+}
+
+#leaderboardTable td {
+  padding: 12px 15px;
+  text-align: center;
+  color: var(--cinema-cream);
+  font-size: 16px;
+}
+
+#leaderboardTable td:first-child {
+  color: var(--cinema-gold);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    padding: 30px 20px;
+  }
+
+  .modal-title {
+    font-size: 24px;
+  }
+
+  #leaderboardTable th,
+  #leaderboardTable td {
+    padding: 10px 8px;
+    font-size: 14px;
+  }
+}

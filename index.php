@@ -34,7 +34,29 @@ session_start();
     <button class="game-btn" id="startDailyBtn">📅 Daily Game</button>
     <button class="game-btn" id="startRandomBtn">🎬 Random Game</button>
   </div>
+
+  <button class="game-btn" id="showLeaderboardBtn" style="margin-top: 20px;">🏆 Show Leaderboard</button>
 </main>
+
+<!-- Leaderboard Modal -->
+<div id="leaderboardModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="modal-close">&times;</span>
+    <h2 class="modal-title">🏆 Leaderboard - Most Wins</h2>
+    <table id="leaderboardTable">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Player</th>
+          <th>Wins</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="3">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 <footer>
   © 2025 Cinemadle. All Rights Reserved.
@@ -120,6 +142,73 @@ window.onload = () => {
 
     randomBtn.addEventListener("click", () => {
         startGame("start_random_game");
+    });
+
+    // Leaderboard functionality
+    const leaderboardBtn = document.getElementById("showLeaderboardBtn");
+    const leaderboardModal = document.getElementById("leaderboardModal");
+    const modalClose = document.querySelector(".modal-close");
+
+    leaderboardBtn.addEventListener("click", async () => {
+        leaderboardModal.style.display = "flex";
+        
+        const currentUser = userEmail || "guest";
+        
+        const payload = {
+            Flag: "request_leaderboard",
+            Payload: {
+                Type: "wins",
+                Username: currentUser
+            }
+        };
+
+        try {
+            const res = await fetch("request_leaderboard.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const out = await res.json();
+
+            if (out.success && out.data.Flag === "leaderboard_data") {
+                const rows = out.data.Payload.Rows;
+                const tbody = document.querySelector("#leaderboardTable tbody");
+                tbody.innerHTML = "";
+
+                if (rows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">No data available</td></tr>';
+                } else {
+                    rows.forEach((r, i) => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${i + 1}</td>
+                                <td>${r.Username}</td>
+                                <td>${r.Value}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            } else {
+                const tbody = document.querySelector("#leaderboardTable tbody");
+                tbody.innerHTML = '<tr><td colspan="3">Failed to load leaderboard</td></tr>';
+            }
+        } catch (error) {
+            const tbody = document.querySelector("#leaderboardTable tbody");
+            tbody.innerHTML = '<tr><td colspan="3">Error loading leaderboard</td></tr>';
+        }
+    });
+
+    // Close modal on X click
+    modalClose.addEventListener("click", () => {
+        leaderboardModal.style.display = "none";
+    });
+
+    // Close modal on outside click
+    leaderboardModal.addEventListener("click", (e) => {
+        if (e.target === leaderboardModal) {
+            leaderboardModal.style.display = "none";
+        }
     });
 };
 </script>
