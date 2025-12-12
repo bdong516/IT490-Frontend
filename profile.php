@@ -27,8 +27,6 @@ $username = $_SESSION['username'] ?? $_SESSION['email'] ?? 'User';
 <header>
   <a href="index.php" class="logo">CINEMADLE</a>
   <nav>
-    <a href="index.php">Home</a>
-    <a href="profile.php">Profile</a>
     <a href="logout.php">Logout</a>
   </nav>
 </header>
