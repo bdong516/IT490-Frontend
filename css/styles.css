@@ -5,8 +5,13 @@
   --cinema-gold: #f4c430;
   --cinema-amber: #ffd700;
   --cinema-red: #c41e3a;
+  --red-accent: #c41e3a;
+  --gold-accent: #f4c430;
   --cinema-cream: #f8f9fa;
   --cinema-shadow: rgba(0, 0, 0, 0.5);
+  --font-primary: "Playfair Display", "Inter", Georgia, serif;
+  --font-secondary: "Inter", sans-serif;
+  --font-display: "Bebas Neue", "Playfair Display", serif;
 }
 
 body {
@@ -30,21 +35,10 @@ body::before {
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.03"/></svg>');
   pointer-events: none;
   z-index: 1;
-  animation: filmGrain 0.5s steps(10) infinite;
+  opacity: 0.5;
 }
 
-@keyframes filmGrain {
-  0%, 100% { transform: translate(0, 0); }
-  10% { transform: translate(-5%, -5%); }
-  20% { transform: translate(-10%, 5%); }
-  30% { transform: translate(5%, -10%); }
-  40% { transform: translate(-5%, 15%); }
-  50% { transform: translate(-10%, 5%); }
-  60% { transform: translate(15%, 0); }
-  70% { transform: translate(0, 10%); }
-  80% { transform: translate(-15%, 0); }
-  90% { transform: translate(10%, 5%); }
-}
+/* Removed aggressive film grain animation to prevent flickering */
 
 /* Ensure content appears above grain */
 header, main, footer {
@@ -94,7 +88,7 @@ header .logo:hover {
 
 @keyframes marqueeFlicker {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.95; }
+  50% { opacity: 0.98; }
 }
 
 nav a {
@@ -390,4 +384,74 @@ footer {
   font-family: var(--font-secondary);
   letter-spacing: 1px;
   box-shadow: 0 -4px 15px rgba(244, 196, 48, 0.15);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  header {
+    padding: 0 20px;
+    height: 60px;
+  }
+
+  header .logo {
+    font-size: 22px;
+    letter-spacing: 2px;
+  }
+
+  nav a {
+    margin-left: 15px;
+    font-size: 14px;
+  }
+
+  main {
+    padding: 30px 15px 20px;
+  }
+
+  #greeting {
+    font-size: 36px;
+    margin: 30px 0 30px;
+  }
+
+  .button-group {
+    gap: 15px;
+  }
+
+  .game-btn {
+    padding: 14px 24px;
+    font-size: 16px;
+  }
+
+  .form-box {
+    max-width: 100%;
+    padding: 30px 24px;
+  }
+
+  .form-box h1 {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  header .logo {
+    font-size: 18px;
+  }
+
+  nav a {
+    margin-left: 10px;
+    font-size: 13px;
+    padding: 6px 8px;
+  }
+
+  #greeting {
+    font-size: 28px;
+  }
+
+  .game-btn {
+    width: 100%;
+    padding: 12px 20px;
+  }
+
+  .form-box {
+    padding: 25px 20px;
+  }
 }
