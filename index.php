@@ -172,19 +172,19 @@ window.onload = () => {
             const out = await res.json();
 
             if (out.success && out.data.Flag === "leaderboard_data") {
-                const rows = out.data.Payload.Rows;
+                const users = out.data.Payload.Users;
                 const tbody = document.querySelector("#leaderboardTable tbody");
                 tbody.innerHTML = "";
 
-                if (rows.length === 0) {
+                if (users.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="3">No data available</td></tr>';
                 } else {
-                    rows.forEach((r, i) => {
+                    users.forEach((user, i) => {
                         tbody.innerHTML += `
                             <tr>
                                 <td>${i + 1}</td>
-                                <td>${r.Username}</td>
-                                <td>${r.Value}</td>
+                                <td>${user.Username}</td>
+                                <td>${user.Wins}</td>
                             </tr>
                         `;
                     });
