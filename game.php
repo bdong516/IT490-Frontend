@@ -21,7 +21,7 @@ $mode = $_GET['mode'] ?? "random";
     <a href="index.php" class="logo">CINEMADLE</a>
     <nav>
         <?php if (!empty($_SESSION["logged_in"])): ?>
-            <span><?php echo htmlspecialchars($username); ?></span>
+            <span><?php echo htmlspecialchars($_SESSION['email']); ?></span>
             <a href="logout.php">Logout</a>
         <?php else: ?>
             <a href="login.php">Login</a>
