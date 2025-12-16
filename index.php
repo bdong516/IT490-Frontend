@@ -28,15 +28,10 @@ session_start();
   </nav>
 </header>
 
-<!-- Movie Poster Carousel -->
 <div class="carousel-container">
   <div class="film-strip-top"></div>
-  <div class="carousel-track carousel-track-left" id="carouselTrack1">
-    <!-- Posters will be dynamically inserted here -->
-  </div>
-  <div class="carousel-track carousel-track-right" id="carouselTrack2">
-    <!-- Posters will be dynamically inserted here -->
-  </div>
+  <div class="carousel-track carousel-track-left" id="carouselTrack1"></div>
+  <div class="carousel-track carousel-track-right" id="carouselTrack2"></div>
   <div class="film-strip-bottom"></div>
 </div>
 
@@ -51,7 +46,6 @@ session_start();
   <button class="game-btn" id="showLeaderboardBtn" style="margin-top: 20px;">🏆 Show Leaderboard</button>
 </main>
 
-<!-- Leaderboard Modal -->
 <div id="leaderboardModal" class="modal" style="display:none;">
   <div class="modal-content">
     <span class="modal-close">&times;</span>
@@ -77,14 +71,6 @@ session_start();
 
 <script>
 window.onload = () => {
-    function generateUUID() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            const r = Math.random()*16|0;
-            const v = c==='x' ? r : (r&0x3|0x8);
-            return v.toString(16);
-        });
-    }
-
     const greeting = document.getElementById("greeting");
     const userEmail = localStorage.getItem("userEmail");
 
@@ -92,56 +78,58 @@ window.onload = () => {
 
     let sessionID = localStorage.getItem("cinemadleSessionID");
     if (!sessionID) {
-        sessionID = generateUUID();
+        sessionID = crypto.randomUUID();
         localStorage.setItem("cinemadleSessionID", sessionID);
     }
 
-    // Load and populate carousel
     function loadCarousel() {
-        const carouselPosters = JSON.parse(localStorage.getItem("carouselPosters")) || [];
-        const track1 = document.getElementById("carouselTrack1");
-        const track2 = document.getElementById("carouselTrack2");
-        
-        // Clear existing content
-        track1.innerHTML = "";
-        track2.innerHTML = "";
-        
-        if (carouselPosters.length === 0) {
-            // Show placeholders if no posters yet
+        const posters = JSON.parse(localStorage.getItem("carouselPosters")) || [];
+        const t1 = document.getElementById("carouselTrack1");
+        const t2 = document.getElementById("carouselTrack2");
+        t1.innerHTML = "";
+        t2.innerHTML = "";
+
+        if (posters.length === 0) {
             for (let i = 0; i < 8; i++) {
-                const placeholder1 = document.createElement("div");
-                placeholder1.className = "carousel-placeholder";
-                placeholder1.textContent = "Play games to collect posters";
-                track1.appendChild(placeholder1);
-                
-                const placeholder2 = document.createElement("div");
-                placeholder2.className = "carousel-placeholder";
-                placeholder2.textContent = "Play games to collect posters";
-                track2.appendChild(placeholder2);
+                const p1 = document.createElement("div");
+                p1.className = "carousel-placeholder";
+                p1.textContent = "Play games to collect posters";
+                t1.appendChild(p1);
+
+                const p2 = document.createElement("div");
+                p2.className = "carousel-placeholder";
+                p2.textContent = "Play games to collect posters";
+                t2.appendChild(p2);
             }
         } else {
-            // Duplicate posters for infinite scroll effect
-            const duplicatedPosters = [...carouselPosters, ...carouselPosters, ...carouselPosters];
-            
-            duplicatedPosters.forEach(posterURL => {
-                const img1 = document.createElement("img");
-                img1.src = posterURL;
-                img1.className = "carousel-poster";
-                img1.alt = "Movie Poster";
-                track1.appendChild(img1);
+            const dup = [...posters, ...posters, ...posters];
+            dup.forEach(u => {
+                const i1 = document.createElement("img");
+                i1.src = u;
+                i1.className = "carousel-poster";
+                t1.appendChild(i1);
             });
-            
-            duplicatedPosters.forEach(posterURL => {
-                const img2 = document.createElement("img");
-                img2.src = posterURL;
-                img2.className = "carousel-poster";
-                img2.alt = "Movie Poster";
-                track2.appendChild(img2);
+            dup.forEach(u => {
+                const i2 = document.createElement("img");
+                i2.src = u;
+                i2.className = "carousel-poster";
+                t2.appendChild(i2);
             });
         }
     }
-    
+
     loadCarousel();
+
+    async function pollLeaderboard(timeout = 6000) {
+        const start = Date.now();
+        while (Date.now() - start < timeout) {
+            const r = await fetch("response_status.json?ts=" + Date.now());
+            const j = await r.json();
+            if (j && j.Flag === "leaderboard_data") return j;
+            await new Promise(res => setTimeout(res, 250));
+        }
+        return null;
+    }
 
     async function startGame(flag) {
         const payload = {
@@ -159,117 +147,77 @@ window.onload = () => {
         });
 
         const out = await res.json();
-
         if (!out.success) {
-            alert("Failed to start game: " + out.message);
+            alert("Failed to start game");
             return;
         }
 
         const data = out.data;
 
-        // Store poster URL for display when game ends
         if (data.Poster) {
             sessionStorage.setItem("gamePosterURL", data.Poster);
         }
 
         if (data.Flag === "daily_already_played") {
-            // Store the message from backend
-            sessionStorage.setItem("dailyAlreadyPlayedMessage", data.Message || "You already played the daily for today.");
-            sessionStorage.setItem("dailyAlreadyPlayedDate", data.Date || "");
+            sessionStorage.setItem("dailyAlreadyPlayedMessage", data.Message || "");
             window.location.href = "daily.php?already=1";
-            return;
         }
 
         if (data.Flag === "daily_game_started") {
             window.location.href = "game.php?mode=daily";
-            return;
         }
 
         if (data.Flag === "random_game_started") {
             window.location.href = "game.php?mode=random";
-            return;
         }
-
-        alert("Unexpected backend response");
     }
 
-    const dailyBtn = document.getElementById("startDailyBtn");
-    const randomBtn = document.getElementById("startRandomBtn");
+    document.getElementById("startDailyBtn").onclick = () => startGame("start_daily_game");
+    document.getElementById("startRandomBtn").onclick = () => startGame("start_random_game");
 
-    dailyBtn.addEventListener("click", () => {
-        startGame("start_daily_game");
-    });
-
-    randomBtn.addEventListener("click", () => {
-        startGame("start_random_game");
-    });
-
-    // Leaderboard functionality
     const leaderboardBtn = document.getElementById("showLeaderboardBtn");
-    const leaderboardModal = document.getElementById("leaderboardModal");
-    const modalClose = document.querySelector(".modal-close");
+    const modal = document.getElementById("leaderboardModal");
+    const close = document.querySelector(".modal-close");
 
-    leaderboardBtn.addEventListener("click", async () => {
-        leaderboardModal.style.display = "flex";
-        
-        const currentUser = userEmail || "guest";
-        
+    leaderboardBtn.onclick = async () => {
+        modal.style.display = "flex";
+
         const payload = {
             Flag: "request_leaderboard",
             Payload: {
                 Type: "wins",
-                Username: currentUser
+                Username: userEmail || "guest"
             }
         };
 
-        try {
-            const res = await fetch("request_leaderboard.php", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
+        await fetch("request_leaderboard.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
 
-            const out = await res.json();
+        const data = await pollLeaderboard();
+        const tbody = document.querySelector("#leaderboardTable tbody");
+        tbody.innerHTML = "";
 
-            if (out.success && out.data.Flag === "leaderboard_data") {
-                const users = out.data.Payload.Users;
-                const tbody = document.querySelector("#leaderboardTable tbody");
-                tbody.innerHTML = "";
-
-                if (users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3">No data available</td></tr>';
-                } else {
-                    users.forEach((user, i) => {
-                        tbody.innerHTML += `
-                            <tr>
-                                <td>${i + 1}</td>
-                                <td>${user.Username}</td>
-                                <td>${user.Wins}</td>
-                            </tr>
-                        `;
-                    });
-                }
-            } else {
-                const tbody = document.querySelector("#leaderboardTable tbody");
-                tbody.innerHTML = '<tr><td colspan="3">Failed to load leaderboard</td></tr>';
-            }
-        } catch (error) {
-            const tbody = document.querySelector("#leaderboardTable tbody");
-            tbody.innerHTML = '<tr><td colspan="3">Error loading leaderboard</td></tr>';
+        if (!data || !data.Payload || !data.Payload.Users) {
+            tbody.innerHTML = '<tr><td colspan="3">Failed to load leaderboard</td></tr>';
+            return;
         }
-    });
 
-    // Close modal on X click
-    modalClose.addEventListener("click", () => {
-        leaderboardModal.style.display = "none";
-    });
+        data.Payload.Users.forEach((u, i) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${u.Username}</td>
+                    <td>${u.Wins}</td>
+                </tr>
+            `;
+        });
+    };
 
-    // Close modal on outside click
-    leaderboardModal.addEventListener("click", (e) => {
-        if (e.target === leaderboardModal) {
-            leaderboardModal.style.display = "none";
-        }
-    });
+    close.onclick = () => modal.style.display = "none";
+    modal.onclick = e => { if (e.target === modal) modal.style.display = "none"; };
 };
 </script>
 
