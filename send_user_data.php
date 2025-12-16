@@ -1,19 +1,22 @@
 <?php
 require_once __DIR__ . '/vendor/autoload.php';
 
-use PhpAmqpLib\Connection\AMQPSSLConnection;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
+use Dotenv\Dotenv;
+
 session_start();
 
-$HAPROXY_HOST = '100.86.66.48';
-$PORT_PLAIN   = 5672;
-$PORT_TLS     = 5671;
-$USE_TLS      = false;  // PHP uses non-TLS, Python uses TLS
-$USERNAME     = 'jol';
-$PASSWORD     = 'sysadmin';
-$QUEUE_NAME   = 'FRONTEND_TO_BACKEND1';
-$responseFile = '/var/www/html/response_status.json';
+$dotenv = Dotenv::createImmutable('/home/bd293/cinemadle_env');
+$dotenv->load();
+
+$HAPROXY_HOST = $_ENV['HAPROXY_HOST'] ?? '100.86.66.48';
+$PORT_PLAIN   = (int)($_ENV['RABBITMQ_PORT'] ?? 5672);
+$USERNAME     = $_ENV['RABBITMQ_USERNAME'] ?? 'jol';
+$PASSWORD     = $_ENV['RABBITMQ_PASSWORD'] ?? 'sysadmin';
+$QUEUE_NAME   = $_ENV['QUEUE_FRONTEND_TO_BACKEND1'] ?? 'FRONTEND_TO_BACKEND1';
+
+$responseFile = $_ENV['RESPONSE_FILE'] ?? '/var/www/html/response_status.json';
 
 $raw  = file_get_contents('php://input');
 $data = json_decode($raw, true);
@@ -26,35 +29,12 @@ if (!$data || !isset($data['Flag'])) {
 $beforeMtime = file_exists($responseFile) ? filemtime($responseFile) : 0;
 
 try {
-    if ($USE_TLS) {
-        // Use AMQPSSLConnection with proper stream context
-        $sslOptions = [
-            'verify_peer'       => false,
-            'verify_peer_name'  => false,
-            'allow_self_signed' => true,
-        ];
-        
-        $connection = new AMQPSSLConnection(
-            $HAPROXY_HOST,
-            $PORT_TLS,
-            $USERNAME,
-            $PASSWORD,
-            '/',
-            $sslOptions,
-            [
-                'connection_timeout' => 3.0,
-                'read_write_timeout' => 3.0,
-                'heartbeat'          => 0,
-            ]
-        );
-    } else {
-        $connection = new AMQPStreamConnection(
-            $HAPROXY_HOST,
-            $PORT_PLAIN,
-            $USERNAME,
-            $PASSWORD
-        );
-    }
+    $connection = new AMQPStreamConnection(
+        $HAPROXY_HOST,
+        $PORT_PLAIN,
+        $USERNAME,
+        $PASSWORD
+    );
 
     $channel = $connection->channel();
     $channel->queue_declare($QUEUE_NAME, false, true, false, false);
@@ -65,11 +45,8 @@ try {
     $channel->close();
     $connection->close();
 } catch (Exception $e) {
-    $errorMsg = $e->getMessage();
-    error_log('RabbitMQ TLS/AMQP connection error (send_user_data.php): ' . $errorMsg);
-    error_log('Connection attempted to: ' . $HAPROXY_HOST . ':' . ($USE_TLS ? $PORT_TLS : $PORT_PLAIN));
-    error_log('TLS enabled: ' . ($USE_TLS ? 'yes' : 'no'));
-    echo json_encode(['success' => false, 'message' => 'RabbitMQ connection failed: ' . $errorMsg]);
+    error_log('RabbitMQ error (send_user_data.php): ' . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'RabbitMQ connection failed']);
     exit;
 }
 
@@ -82,8 +59,12 @@ while (microtime(true) - $start < $timeout) {
 
     if (file_exists($responseFile)) {
         $mtime = filemtime($responseFile);
+
         if ($mtime > $beforeMtime) {
+            $beforeMtime = $mtime; // 🔑 CRITICAL FIX
+
             $json = json_decode(file_get_contents($responseFile), true);
+
             if ($json && isset($json['Flag'])) {
                 if (in_array($json['Flag'], [
                     'Login_Accepted',
@@ -97,6 +78,7 @@ while (microtime(true) - $start < $timeout) {
             }
         }
     }
+
     usleep(15000);
 }
 

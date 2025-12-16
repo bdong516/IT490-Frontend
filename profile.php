@@ -1,7 +1,6 @@
 <?php
 session_start();
 
-// Redirect to login if not logged in
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     header('Location: login.php');
     exit;
@@ -51,7 +50,6 @@ $username = $_SESSION['username'] ?? $_SESSION['email'] ?? 'User';
     </div>
 
     <div id="profileContent" style="display: none;">
-      <!-- Stats Section -->
       <div class="stats-section">
         <h2 class="section-title">📊 Your Statistics</h2>
         <div class="stats-grid">
@@ -78,12 +76,9 @@ $username = $_SESSION['username'] ?? $_SESSION['email'] ?? 'User';
         </div>
       </div>
 
-      <!-- History Section -->
       <div class="history-section">
         <h2 class="section-title">🎬 Game History</h2>
-        <div id="historyList" class="history-list">
-          <!-- History items will be inserted here -->
-        </div>
+        <div id="historyList" class="history-list"></div>
         <div id="noHistory" class="no-history" style="display: none;">
           <p>No games played yet. Start playing to build your history!</p>
           <a href="index.php" class="game-btn">Play Now</a>
@@ -105,12 +100,30 @@ if (!sessionID) {
     localStorage.setItem("cinemadleSessionID", sessionID);
 }
 
+async function pollProfileResponse(timeout = 8000) {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+        const r = await fetch("response_status.json?ts=" + Date.now());
+        const data = await r.json();
+        if (!data || data.SessionID !== sessionID) {
+            await new Promise(res => setTimeout(res, 250));
+            continue;
+        }
+
+        if (data.Flag === "user_profile_data" || data.Flag === "user_profile_error") {
+            return data;
+        }
+
+        await new Promise(res => setTimeout(res, 250));
+    }
+    return null;
+}
+
 async function loadProfile() {
     const loadingState = document.getElementById("loadingState");
     const errorState = document.getElementById("errorState");
     const profileContent = document.getElementById("profileContent");
 
-    // Show loading state
     loadingState.style.display = "flex";
     errorState.style.display = "none";
     profileContent.style.display = "none";
@@ -131,21 +144,23 @@ async function loadProfile() {
         });
 
         const out = await res.json();
+        if (!out.success) throw new Error(out.message || "Request failed");
 
-        if (out.success && out.data.Flag === "user_profile_data") {
-            displayProfileData(out.data.Payload);
-            loadingState.style.display = "none";
-            profileContent.style.display = "block";
-        } else if (out.data && out.data.Flag === "user_profile_error") {
-            throw new Error(out.data.Message || "Failed to load profile");
-        } else {
-            throw new Error("Unexpected response from server");
+        const data = await pollProfileResponse();
+        if (!data) throw new Error("No profile response");
+
+        if (data.Flag === "user_profile_error") {
+            throw new Error(data.Message || "Failed to load profile");
         }
+
+        displayProfileData(data.Payload);
+        loadingState.style.display = "none";
+        profileContent.style.display = "block";
+
     } catch (error) {
-        console.error("Profile load error:", error);
         loadingState.style.display = "none";
         errorState.style.display = "flex";
-        errorState.querySelector(".error-message").textContent = error.message || "Failed to load profile. Please try again.";
+        errorState.querySelector(".error-message").textContent = error.message;
     }
 }
 
@@ -153,67 +168,61 @@ function displayProfileData(data) {
     const stats = data.Stats || {};
     const history = data.History || [];
 
-    // Display stats
     document.getElementById("statWins").textContent = stats.Wins || 0;
     document.getElementById("statLosses").textContent = stats.Losses || 0;
     document.getElementById("statStreak").textContent = stats.DailyStreak || 0;
 
-    // Calculate win rate
     const totalGames = (stats.Wins || 0) + (stats.Losses || 0);
     const winRate = totalGames > 0 ? Math.round((stats.Wins / totalGames) * 100) : 0;
     document.getElementById("statWinRate").textContent = winRate + "%";
 
-    // Display history
     const historyList = document.getElementById("historyList");
     const noHistory = document.getElementById("noHistory");
 
     if (history.length === 0) {
         historyList.style.display = "none";
         noHistory.style.display = "flex";
-    } else {
-        historyList.style.display = "block";
-        noHistory.style.display = "none";
-        historyList.innerHTML = "";
-
-        history.forEach(game => {
-            const gameCard = document.createElement("div");
-            gameCard.className = "history-card";
-
-            const resultIcon = game.Won ? "🎉" : "❌";
-            const resultText = game.Won ? "Won" : "Lost";
-            const resultClass = game.Won ? "result-win" : "result-loss";
-
-            const playedDate = new Date(game.PlayedAt);
-            const dateStr = playedDate.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
-
-            gameCard.innerHTML = `
-                <div class="history-result ${resultClass}">
-                    <span class="result-icon">${resultIcon}</span>
-                    <span class="result-text">${resultText}</span>
-                </div>
-                <div class="history-details">
-                    <div class="history-title">${game.AnswerTitle || 'Unknown Movie'}</div>
-                    <div class="history-meta">
-                        <span class="history-mode">${game.GameMode === 'daily' ? '📅 Daily' : '🎬 Random'}</span>
-                        <span class="history-attempts">${game.Attempts} attempt${game.Attempts !== 1 ? 's' : ''}</span>
-                        <span class="history-date">${dateStr}</span>
-                    </div>
-                </div>
-            `;
-
-            historyList.appendChild(gameCard);
-        });
+        return;
     }
+
+    historyList.style.display = "block";
+    noHistory.style.display = "none";
+    historyList.innerHTML = "";
+
+    history.forEach(game => {
+        const card = document.createElement("div");
+        card.className = "history-card";
+
+        const resultIcon = game.Won ? "🎉" : "❌";
+        const resultText = game.Won ? "Won" : "Lost";
+        const resultClass = game.Won ? "result-win" : "result-loss";
+
+        const playedDate = new Date(game.PlayedAt);
+        const dateStr = playedDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+
+        card.innerHTML = `
+            <div class="history-result ${resultClass}">
+                <span class="result-icon">${resultIcon}</span>
+                <span class="result-text">${resultText}</span>
+            </div>
+            <div class="history-details">
+                <div class="history-title">${game.AnswerTitle || 'Unknown Movie'}</div>
+                <div class="history-meta">
+                    <span class="history-mode">${game.GameMode === 'daily' ? '📅 Daily' : '🎬 Random'}</span>
+                    <span class="history-attempts">${game.Attempts} attempt${game.Attempts !== 1 ? 's' : ''}</span>
+                    <span class="history-date">${dateStr}</span>
+                </div>
+            </div>
+        `;
+        historyList.appendChild(card);
+    });
 }
 
-// Load profile on page load
-window.addEventListener("DOMContentLoaded", () => {
-    loadProfile();
-});
+window.addEventListener("DOMContentLoaded", loadProfile);
 </script>
 
 </body>

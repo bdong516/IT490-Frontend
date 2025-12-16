@@ -33,39 +33,40 @@ $mode = $_GET['mode'] ?? "random";
 
 <main class="game-container">
 
-    <?php if ($mode === "daily"): ?>
-        <h1>Daily Game</h1>
-    <?php elseif ($mode === "daily_summary"): ?>
-        <h1>Daily Summary</h1>
-    <?php else: ?>
-        <h1>Guess the Movie!</h1>
-    <?php endif; ?>
+<?php if ($mode === "daily"): ?>
+    <h1>Daily Game</h1>
+<?php elseif ($mode === "daily_summary"): ?>
+    <h1>Daily Summary</h1>
+<?php else: ?>
+    <h1>Guess the Movie!</h1>
+<?php endif; ?>
 
-    <img id="moviePoster" class="poster" style="display:none;" alt="Movie Poster">
+<img id="moviePoster" class="poster" style="display:none;" alt="Movie Poster">
 
-    <form id="guessForm" autocomplete="off">
-        <div class="guess-wrapper">
-            <input type="text" id="guessInput" placeholder="Enter your guess..." required>
-            <ul id="suggestions"></ul>
-        </div>
-        <button type="submit" class="primary-btn">Submit Guess</button>
-    </form>
-
-    <div id="responseArea"></div>
-
-    <div id="historyBox">
-        <h3>Your Guess History</h3>
-        <div id="historyList"></div>
+<form id="guessForm" autocomplete="off">
+    <div class="guess-wrapper">
+        <input type="text" id="guessInput" placeholder="Enter your guess..." required>
+        <ul id="suggestions"></ul>
     </div>
+    <button type="submit" class="primary-btn">Submit Guess</button>
+</form>
 
-    <div id="hintBox">
-        <h3>Hints</h3>
-        <div id="hintContent">Make a guess to see hints!</div>
-    </div>
+<div id="responseArea"></div>
 
-    <div id="playAgainBox" style="display:none; text-align:center; margin-top:30px;">
-        <button id="playAgainBtn" class="primary-btn"></button>
-    </div>
+<div id="historyBox">
+    <h3>Your Guess History</h3>
+    <div id="historyList"></div>
+</div>
+
+<div id="hintBox">
+    <h3>Hints</h3>
+    <div id="hintContent">Make a guess to see hints!</div>
+</div>
+
+<div id="playAgainBox" style="display:none; text-align:center; margin-top:30px;">
+    <button id="playAgainBtn" class="primary-btn"></button>
+</div>
+
 </main>
 
 <script>
@@ -78,34 +79,25 @@ if (!sessionID) {
 
 const username = "<?php echo $username; ?>";
 
-// Helper function to add poster to carousel collection
 function addPosterToCarousel(posterURL) {
     try {
         let carouselPosters = JSON.parse(localStorage.getItem("carouselPosters")) || [];
-        
-        // Avoid duplicates
         if (!carouselPosters.includes(posterURL)) {
             carouselPosters.push(posterURL);
-            
-            // Keep only last 20 posters
             if (carouselPosters.length > 20) {
                 carouselPosters = carouselPosters.slice(-20);
             }
-            
             localStorage.setItem("carouselPosters", JSON.stringify(carouselPosters));
         }
-    } catch (error) {
-        console.error("Failed to save poster to carousel:", error);
-    }
+    } catch (e) {}
 }
 
 let movies = [];
 async function loadMovies() {
-    const r = await fetch("movies.json");
+    const r = await fetch("movies.json?t=" + Date.now());
     movies = await r.json();
 }
 loadMovies();
-
 
 const input = document.getElementById("guessInput");
 const suggestions = document.getElementById("suggestions");
@@ -118,7 +110,6 @@ input.addEventListener("input", () => {
     if (!txt) return;
 
     const results = movies.filter(m => m.title.toLowerCase().includes(txt)).slice(0, 10);
-
     for (const m of results) {
         const li = document.createElement("li");
         li.textContent = m.title;
@@ -140,6 +131,19 @@ document.addEventListener("click", e => {
 const responseDiv = document.getElementById("responseArea");
 const historyList = document.getElementById("historyList");
 const hintContent = document.getElementById("hintContent");
+
+async function pollGameState(timeout = 5000) {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+        const r = await fetch("response_status.json?ts=" + Date.now());
+        const data = await r.json();
+        if (data && data.SessionID === sessionID) {
+            return data;
+        }
+        await new Promise(res => setTimeout(res, 200));
+    }
+    return null;
+}
 
 document.getElementById("guessForm").addEventListener("submit", async e => {
     e.preventDefault();
@@ -173,7 +177,10 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
     });
 
     const out = await r.json();
-    const g = out.data;
+    if (!out.success) return;
+
+    const g = await pollGameState();
+    if (!g) return;
 
     if (g.Flag === "guess_feedback") {
         responseDiv.textContent = "❌ Incorrect Guess";
@@ -197,59 +204,28 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
         hintContent.innerHTML = hintHTML;
     }
 
-    if (g.Flag === "game_over") {
-        responseDiv.textContent = "🎉 Correct! The movie was: " + g.Answer;
+    if (g.Flag === "game_over" || g.Flag === "game_lost") {
+        responseDiv.textContent =
+            g.Flag === "game_over"
+                ? "🎉 Correct! The movie was: " + g.Answer
+                : "❌ Game Over — The answer was: " + g.Answer;
 
         const item = document.createElement("div");
         item.className = "history-item";
-        item.textContent = guessText + " — Correct!";
+        item.textContent = guessText;
         historyList.appendChild(item);
 
-        hintContent.innerHTML = "<p>You won in " + g.Attempts + " attempts!</p>";
+        hintContent.innerHTML = "<p>Attempts: " + g.Attempts + "</p>";
 
-        // Display poster when game ends
-        const posterURL = sessionStorage.getItem("gamePosterURL");
+        const posterURL = g.Poster || sessionStorage.getItem("gamePosterURL");
         if (posterURL) {
             const posterImg = document.getElementById("moviePoster");
             posterImg.src = posterURL;
             posterImg.style.display = "block";
-            
-            // Add poster to carousel collection
             addPosterToCarousel(posterURL);
         }
 
-        // Hide form when game ends
         document.getElementById("guessForm").style.display = "none";
-
-        // Show play again button
-        showPlayAgainButton();
-    }
-
-    if (g.Flag === "game_lost") {
-        responseDiv.textContent = "❌ Game Over — The answer was: " + g.Answer;
-
-        const item = document.createElement("div");
-        item.className = "history-item";
-        item.textContent = guessText + " — Incorrect";
-        historyList.appendChild(item);
-
-        hintContent.innerHTML = "<p>You used all attempts (" + g.Attempts + ").</p>";
-
-        // Display poster when game ends
-        const posterURL = sessionStorage.getItem("gamePosterURL");
-        if (posterURL) {
-            const posterImg = document.getElementById("moviePoster");
-            posterImg.src = posterURL;
-            posterImg.style.display = "block";
-            
-            // Add poster to carousel collection
-            addPosterToCarousel(posterURL);
-        }
-
-        // Hide form when game ends
-        document.getElementById("guessForm").style.display = "none";
-
-        // Show play again button
         showPlayAgainButton();
     }
 
@@ -258,17 +234,11 @@ document.getElementById("guessForm").addEventListener("submit", async e => {
     suggestions.innerHTML = "";
 });
 
-// Function to show appropriate play again button based on game mode
 function showPlayAgainButton() {
     const playAgainBox = document.getElementById("playAgainBox");
     const playAgainBtn = document.getElementById("playAgainBtn");
 
-    if (gameMode === "daily") {
-        playAgainBtn.textContent = "Play Random Mode";
-    } else {
-        playAgainBtn.textContent = "Play Again!";
-    }
-
+    playAgainBtn.textContent = gameMode === "daily" ? "Play Random Mode" : "Play Again!";
     playAgainBox.style.display = "block";
 
     playAgainBtn.addEventListener("click", async () => {
@@ -297,7 +267,6 @@ function showPlayAgainButton() {
         }
     });
 }
-
 </script>
 
 </body>
